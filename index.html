@@ -33,6 +33,7 @@
     --color-today-text: #fff;
   }
 }
+
 body {
   font-family: system-ui, sans-serif;
   display: flex;
@@ -107,7 +108,47 @@ textarea {
 textarea:focus {
   outline: 0;
 }
+
+/* Weeks */
+
+#menu {
+  padding: 1rem;
+  flex-basis: 100%;
+}
+
+.week-heading {
+  font-size: 0.75rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding-bottom: 0.5rem;
+}
+
+ol {
+  list-style: none;
+  font-size: 0.75rem;
+  letter-spacing: .05em;
+}
 </style>
+
+<template id="weekrow">
+  <style>
+    li {
+      list-style: none;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.75rem;
+    }
+
+    .past-weeks {
+      background-color: rgba(255,255,255, .075);
+    }
+  </style>
+  <li></li>
+</template>
+
+<div id="menu">
+  <p class="week-heading">Week 11 / 52</p>
+  <ol class="weeks"></ol>
+</div>
 
 <form class="plan">
   <label for="monday" class="notes day">
@@ -151,6 +192,15 @@ textarea:focus {
 <script>
 const days  = Array.from(document.querySelectorAll(".day"));
 const notes = Array.from(document.querySelectorAll("textarea"));
+
+Date.prototype.getWeekNumber = function(){
+  var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
+  var dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
+};
+
 
 document.addEventListener("keydown", e => {
   if (e.metaKey === true && e.key === "s") {
@@ -204,4 +254,24 @@ notes.forEach(note => {
     localStorage.setItem(id, note.value);
   });
 });
+
+let currentWeek = new Date().getWeekNumber();
+
+if ('content' in document.createElement('template')) {
+  let template = document.querySelector('#weekrow');
+  let menu = document.querySelector('.weeks');
+
+  for (let i = 0; i < 52; i++) {
+    var clone = template.content.cloneNode(true);
+    var li = clone.querySelectorAll("li")[0];
+    li.textContent = String(i + 1);
+    menu.appendChild(clone);
+
+    if (i < currentWeek - 1) {
+      li.classList.add('past-weeks')
+    } else if (i == currentWeek - 1) {
+      li.classList.add('current-week')
+    }
+  }
+}
 </script>
