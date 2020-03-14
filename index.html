@@ -86,12 +86,8 @@ body {
   color: var(--color-today-text);
 }
 
-.week {
-  grid-column: span 2;
-}
-
 .month {
-  grid-column: span 2;
+  grid-column: span 3;
 }
 
 textarea {
@@ -175,10 +171,6 @@ ol {
     <span class="heading">Weekend</span>
     <textarea id="weekend" spellcheck="false"></textarea>
   </label>
-  <label for="this-week" class="notes week">
-    <span class="heading">This Week</span>
-    <textarea id="this-week" spellcheck="false"></textarea>
-  </label>
   <label for="this-month" class="notes month">
     <span class="heading">This month</span>
     <textarea id="this-month" spellcheck="false"></textarea>
@@ -216,7 +208,7 @@ function hightlightCurrentDay() {
   days.forEach((day, index) => {
     unhighlightDay(day);
     if (index === today.getDay() - 1) {
-      highlightDay(day, (today.getMonth() + 1) + "." + (today.getDate()));
+      highlightDay(day, today.getDate() + "." + (today.getMonth() + 1) + ".");
     }
   });
 }
