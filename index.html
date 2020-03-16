@@ -53,7 +53,6 @@ body {
 }
 
 .heading {
-  padding-bottom: .5rem;
   border-bottom: 1px solid var(--color-day-border);
   font-weight: 400;
   padding: .5rem;
@@ -112,21 +111,39 @@ textarea:focus {
 /* Weeks */
 
 #menu {
-  padding: 1rem;
-  flex-basis: 100%;
+  padding: 1rem 0 1rem 1rem;
+  /* flex-basis: 10%; */
 }
 
-.week-heading {
+.menu-heading {
   font-size: 0.75rem;
   letter-spacing: .05em;
   text-transform: uppercase;
-  padding-bottom: 0.5rem;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding: 0.5rem 0 1rem 0;
 }
+
+#week-heading {
+  font-size: 0.75rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* 
+#percentage {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+} */
 
 ol {
   list-style: none;
   font-size: 0.75rem;
   letter-spacing: .05em;
+  cursor: pointer;
+  text-align: left;
 }
 </style>
 
@@ -136,18 +153,31 @@ ol {
       list-style: none;
       font-variant-numeric: tabular-nums;
       font-size: 0.75rem;
+      /* padding-bottom: 0.25rem; */
     }
 
-    .past-weeks {
-      background-color: rgba(255,255,255, .075);
+    li:hover {
+      color: black;
+    }
+
+    .past-week,
+    .future-week {
+      color: lightgray;
+    }
+
+    .current-week {
+      color: black;
     }
   </style>
   <li></li>
 </template>
 
 <div id="menu">
-  <p class="week-heading">Week 11 / 52</p>
   <ol class="weeks"></ol>
+  <div class="menu-heading">
+    <!-- <p id="week-heading"></p> -->
+    <p id="percentage"></p>
+  </div>
 </div>
 
 <form class="plan">
@@ -201,12 +231,28 @@ Date.prototype.getWeekNumber = function(){
   return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
 };
 
-
 document.addEventListener("keydown", e => {
   if (e.metaKey === true && e.key === "s") {
     e.preventDefault();
   }
 });
+
+function onWeekClick(weekNumber) {
+  let oldWeek = document.getElementById(currentWeekNumber);
+  oldWeek.classList = "";
+
+  if (weekNumber < currentWeekNumber) {
+    oldWeek.classList.add('future-week'); 
+  } else if (weekNumber > currentWeekNumber) {
+    oldWeek.classList.add('past-week');
+  } else {
+    oldWeek.classList.add('current-week');
+  }
+
+  let clickedWeek = document.getElementById(weekNumber);
+  clickedWeek.classList.add('current-week');
+  currentWeekNumber = weekNumber;
+}
 
 function hightlightCurrentDay() {
   if (document.visibilityState != 'visible') { return; }
@@ -255,7 +301,8 @@ notes.forEach(note => {
   });
 });
 
-let currentWeek = new Date().getWeekNumber();
+let currentWeekNumber = new Date().getWeekNumber();
+document.getElementById('percentage').textContent = `${(currentWeekNumber / 52 * 100 | 0) + '%'}`;
 
 if ('content' in document.createElement('template')) {
   let template = document.querySelector('#weekrow');
@@ -264,13 +311,20 @@ if ('content' in document.createElement('template')) {
   for (let i = 0; i < 52; i++) {
     var clone = template.content.cloneNode(true);
     var li = clone.querySelectorAll("li")[0];
-    li.textContent = String(i + 1);
+    li.id =`${i + 1}`;
+    li.textContent = `${i + 1}`;
+    li.onclick = () => {
+      onWeekClick(i + 1);
+    };
     menu.appendChild(clone);
 
-    if (i < currentWeek - 1) {
-      li.classList.add('past-weeks')
-    } else if (i == currentWeek - 1) {
+    if (i < currentWeekNumber - 1) {
+      li.classList.add('past-week')
+    } else if (i == currentWeekNumber - 1) {
       li.classList.add('current-week')
+      li.textContent = li.textContent + '*';
+    } else {
+      li.classList.add('future-week');
     }
   }
 }
