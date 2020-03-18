@@ -115,7 +115,7 @@ textarea:focus {
   /* flex-basis: 10%; */
 }
 
-.menu-heading {
+.week-selector {
   font-size: 0.75rem;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -174,11 +174,12 @@ ol {
 
 <div id="menu">
   <ol class="weeks"></ol>
-  <div class="menu-heading">
-    <!-- <p id="week-heading"></p> -->
+  <div class="week-selector">
     <p id="percentage"></p>
   </div>
 </div>
+
+<plan-area></plan-area>
 
 <form class="plan">
   <label for="monday" class="notes day">
@@ -223,7 +224,8 @@ ol {
 const days  = Array.from(document.querySelectorAll(".day"));
 const notes = Array.from(document.querySelectorAll("textarea"));
 
-Date.prototype.getWeekNumber = function(){
+/* Methods */
+Date.prototype.getCurrentWeekNumber = function() {
   var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
   var dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -231,13 +233,26 @@ Date.prototype.getWeekNumber = function(){
   return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
 };
 
+Date.prototype.getDaysfromWeekNumber = function(weekNumber) {
+  var d = new Date();
+};
+
+/* 
+// returns an array of dates returned from a week number
+getDaysFromWeekNumber(weekNumber) {
+  return Array(Dates...) // [Date, Date, Date, Date, Date, Date, Date]
+}
+*/
+
 document.addEventListener("keydown", e => {
   if (e.metaKey === true && e.key === "s") {
     e.preventDefault();
   }
 });
 
+// Update sidebar and notes
 function onWeekClick(weekNumber) {
+  // sidebar
   let oldWeek = document.getElementById(currentWeekNumber);
   oldWeek.classList = "";
 
@@ -252,6 +267,17 @@ function onWeekClick(weekNumber) {
   let clickedWeek = document.getElementById(weekNumber);
   clickedWeek.classList.add('current-week');
   currentWeekNumber = weekNumber;
+
+  // notes
+}
+
+function getDayNumFromWeekNum(weekNumber) {
+
+}
+
+function updateNoteIds(weekNumber) {
+  notes.forEach(note => {
+  });
 }
 
 function hightlightCurrentDay() {
@@ -285,6 +311,7 @@ function unhighlightDay(day) {
   if (existingSpan != null) { existingSpan.remove() }
 }
 
+/* Initial Setup */
 hightlightCurrentDay();
 document.addEventListener('visibilitychange', hightlightCurrentDay);
 
@@ -301,7 +328,7 @@ notes.forEach(note => {
   });
 });
 
-let currentWeekNumber = new Date().getWeekNumber();
+let currentWeekNumber = new Date().getCurrentWeekNumber();
 document.getElementById('percentage').textContent = `${(currentWeekNumber / 52 * 100 | 0) + '%'}`;
 
 if ('content' in document.createElement('template')) {
