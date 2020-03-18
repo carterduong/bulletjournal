@@ -1,0 +1,82 @@
+<title>Bullet Journal</title>
+
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAE1SURBVHgB7ZdBDoIwEEWn6IJluQFLj+MNjCdQT6BbV8YTyA30RnID2LrCmRiVNMAMdLQs+IlJJe28z0wZigGhkiSpoIeKojCSeREE1txauzHGHHBsmyZI76RNHZnLq6o6RwjftsF/rBTZeypBCuFkw+8B94Jvzbl47p4YXwbapJ2Zt4JnYDKgbgA76wp3eoG/O46X3HxVAwTH7pbBq7NSp7twa9QM1OB1ldw6FQMtcMCXzY5byxqgOnbVtAO+LsvyxsVnDWDwE3xreiWgEJ6BQJJOaB1DGYI/Y/CAk9gMNNWRwBpwkQEKSIG5eUPgIgMSE0PhYgNdJnzgvQw4JnL66wsnGfeEIn3v45NgEc52OldqJ6Ih8CZN5wHT95tPW6MogcpmGqh8FsfxA/v6Av7/fUh95PgEIROb9L5bVT0AAAAASUVORK5CYII=">
+
+<link rel="stylesheet" type="text/css" href="style.css">
+
+<template id="weekrow">
+  <style>
+    li {
+      list-style: none;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.75rem;
+      /* padding-bottom: 0.25rem; */
+    }
+
+    li:hover {
+      color: black;
+    }
+
+    .past-week,
+    .future-week {
+      color: lightgray;
+    }
+
+    .current-week {
+      color: black;
+    }
+  </style>
+  <li></li>
+</template>
+
+<div id="menu">
+  <ol class="weeks"></ol>
+  <div class="week-selector">
+    <p id="percentage"></p>
+  </div>
+</div>
+
+<plan-area></plan-area>
+<week-selector></week-selector>
+
+<form class="plan">
+  <label for="monday" class="notes day">
+    <span class="heading">Monday</span>
+    <textarea id="monday" spellcheck="false"></textarea>
+  </label>
+  <label for="tuesday" class="notes day">
+    <span class="heading">Tuesday</span>
+    <textarea id="tuesday" spellcheck="false"></textarea>
+  </label>
+  <label for="wednesday" class="notes day">
+    <span class="heading">Wednesday</span>
+    <textarea id="wednesday" spellcheck="false"></textarea>
+  </label>
+  <label for="thursday" class="notes day">
+    <span class="heading">Thursday</span>
+    <textarea id="thursday" spellcheck="false"></textarea>
+  </label>
+  <label for="friday" class="notes day">
+    <span class="heading">Friday</span>
+    <textarea id="friday" spellcheck="false"></textarea>
+  </label>
+  <label for="weekend" class="notes weekend">
+    <span class="heading">Weekend</span>
+    <textarea id="weekend" spellcheck="false"></textarea>
+  </label>
+
+  <label for="this-week" class="notes week">
+    <span class="heading">This Week</span>
+    <textarea id="this-week" spellcheck="false"></textarea>
+  </label>
+  <label for="this-month" class="notes month">
+    <span class="heading">This month</span>
+    <textarea id="this-month" spellcheck="false"></textarea>
+  </label>
+  <label for="next-month" class="notes month">
+    <span class="heading">Next month</span>
+    <textarea id="next-month" spellcheck="false"></textarea>
+  </label>
+</form>
+
+<script type="module" src="app.js"></script>

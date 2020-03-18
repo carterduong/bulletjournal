@@ -4,7 +4,7 @@
   "description": "I absolutely love bullet journals! While being a freelancer, it was the only way for me to keep track of parallel projects and tasks and to free my mind for personal stuff. I stopped working with bullet journals as soon as I started working full-time for [Kirby](https://getkirby.com) The chaos was a lot more controllable from there on. But I still miss taking notes and organizing tasks that way. Inspired by a [tweet](https://twitter.com/seaotta/status/1186382494582489088) I thought it would be a nice idea to come up with a very minimalist approach to a digital bullet journal.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "webpack-dev-server --open"
   },
   "repository": {
     "type": "git",
@@ -18,5 +18,11 @@
   "homepage": "https://github.com/carterduong/bulletjournal#readme",
   "dependencies": {
     "lit-element": "^2.2.1"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^5.1.1",
+    "webpack": "^4.42.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
   }
 }
