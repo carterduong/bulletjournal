@@ -31,6 +31,7 @@
 body {
   font-family: system-ui, sans-serif;
   display: flex;
+  flex-direction: column;
   height: 100%;
   line-height: 1;
   font-size: .875rem;
@@ -102,40 +103,7 @@ textarea:focus {
   outline: 0;
 }
 
-/* Weeks */
-
-#menu {
-  padding: 1rem 0 1rem 1rem;
-  /* flex-basis: 10%; */
-}
-
-.week-selector {
-  font-size: 0.75rem;
-  letter-spacing: .05em;
-  text-transform: uppercase;
+week-selector {
   display: flex;
-  width: 100%;
   justify-content: space-between;
-  padding: 0.5rem 0 1rem 0;
-}
-
-#week-heading {
-  font-size: 0.75rem;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
-
-/* 
-#percentage {
-  position: fixed;
-  left: 1rem;
-  bottom: 1rem;
-} */
-
-ol {
-  list-style: none;
-  font-size: 0.75rem;
-  letter-spacing: .05em;
-  cursor: pointer;
-  text-align: left;
 }

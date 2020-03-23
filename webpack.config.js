@@ -17,4 +17,7 @@ module.exports = {
             { from: 'src/style.css', to: './' },
         ]),
     ],
+    resolve: {
+      extensions: ['.js']
+    }
 };

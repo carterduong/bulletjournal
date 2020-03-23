@@ -4,41 +4,6 @@
 
 <link rel="stylesheet" type="text/css" href="style.css">
 
-<template id="weekrow">
-  <style>
-    li {
-      list-style: none;
-      font-variant-numeric: tabular-nums;
-      font-size: 0.75rem;
-      /* padding-bottom: 0.25rem; */
-    }
-
-    li:hover {
-      color: black;
-    }
-
-    .past-week,
-    .future-week {
-      color: lightgray;
-    }
-
-    .current-week {
-      color: black;
-    }
-  </style>
-  <li></li>
-</template>
-
-<div id="menu">
-  <ol class="weeks"></ol>
-  <div class="week-selector">
-    <p id="percentage"></p>
-  </div>
-</div>
-
-<plan-area></plan-area>
-<week-selector></week-selector>
-
 <form class="plan">
   <label for="monday" class="notes day">
     <span class="heading">Monday</span>
@@ -78,5 +43,7 @@
     <textarea id="next-month" spellcheck="false"></textarea>
   </label>
 </form>
+
+<week-selector></week-selector>
 
 <script type="module" src="app.js"></script>

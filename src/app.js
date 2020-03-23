@@ -1,5 +1,5 @@
-
-import { LitElement, html } from 'lit-element/lit-element.js';
+import { LitElement, html, css } from 'lit-element/lit-element.js';
+import weekSelector from './weekSelector.js';
 
 const days  = Array.from(document.querySelectorAll(".day"));
 const notes = Array.from(document.querySelectorAll("textarea"));
@@ -11,17 +11,6 @@ document.addEventListener("keydown", e => {
   }
 });
 
-/* Custom Elements */
-class weekSelector extends LitElement {
-  render() {
-    return html`
-      <p>test</p>
-    `;
-  }
-}
-
-customElements.define('week-selector', weekSelector);
-
 /* Methods */
 Date.prototype.getCurrentWeekNumber = function() {
   var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
@@ -31,8 +20,29 @@ Date.prototype.getCurrentWeekNumber = function() {
   return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
 };
 
-Date.prototype.getDaysfromWeekNumber = function(weekNumber) {
-  var d = new Date();
+Date.prototype.getNumberofWeeks = function() {
+  var d = new Date(new Date().getFullYear(), 11, 31);
+  var first = new Date(d.getFullYear(),0,1);
+  var dayms = 1000 * 60 * 60 * 24;
+  var numday = ((d - first)/dayms)
+  var weeks = Math.ceil((numday + first.getDay()+1) / 7) ; 
+  return weeks
+}
+
+Date.prototype.isLeapYear = function() {
+  var year = this.getFullYear();
+  if((year & 3) != 0) return false;
+  return ((year % 100) != 0 || (year % 400) == 0);
+};
+
+// Get Day of Year
+Date.prototype.getDOY = function() {
+  var dayCount = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  var mn = this.getMonth();
+  var dn = this.getDate();
+  var dayOfYear = dayCount[mn] + dn;
+  if(mn > 1 && this.isLeapYear()) dayOfYear++;
+  return dayOfYear;
 };
 
 /* 
@@ -59,12 +69,12 @@ function onWeekClick(weekNumber) {
   let clickedWeek = document.getElementById(weekNumber);
   clickedWeek.classList.add('current-week');
   currentWeekNumber = weekNumber;
-
-  // notes
 }
 
-function getDayNumFromWeekNum(weekNumber) {
-
+function updateDates(currentWeek, days) {
+  for (let [index, day] of days.entries()) {
+    day.id = `w${currentWeek}d${index}`;
+  }
 }
 
 function updateNoteIds(weekNumber) {
@@ -103,6 +113,9 @@ function unhighlightDay(day) {
   if (existingSpan != null) { existingSpan.remove() }
 }
 
+/* Custom Elements */
+customElements.define('week-selector', weekSelector);
+
 /* Initial Setup */
 hightlightCurrentDay();
 document.addEventListener('visibilitychange', hightlightCurrentDay);
@@ -121,29 +134,30 @@ notes.forEach(note => {
 });
 
 let currentWeekNumber = new Date().getCurrentWeekNumber();
-document.getElementById('percentage').textContent = `${(currentWeekNumber / 52 * 100 | 0) + '%'}`;
+// document.getElementById('percentage').textContent = `${(currentWeekNumber / 52 * 100 | 0) + '%'}`;
+updateDates(currentWeekNumber, days);
 
-if ('content' in document.createElement('template')) {
-  let template = document.querySelector('#weekrow');
-  let menu = document.querySelector('.weeks');
+// if ('content' in document.createElement('template')) {
+//   let template = document.querySelector('#weekrow');
+//   let menu = document.querySelector('.weeks');
 
-  for (let i = 0; i < 52; i++) {
-    var clone = template.content.cloneNode(true);
-    var li = clone.querySelectorAll("li")[0];
-    li.id =`${i + 1}`;
-    li.textContent = `${i + 1}`;
-    li.onclick = () => {
-      onWeekClick(i + 1);
-    };
-    menu.appendChild(clone);
+//   for (let i = 0; i < 52; i++) {
+//     var clone = template.content.cloneNode(true);
+//     var li = clone.querySelectorAll("li")[0];
+//     li.id =`${i + 1}`;
+//     li.textContent = `${i + 1}`;
+//     li.onclick = () => {
+//       onWeekClick(i + 1);
+//     };
+//     menu.appendChild(clone);
 
-    if (i < currentWeekNumber - 1) {
-      li.classList.add('past-week')
-    } else if (i == currentWeekNumber - 1) {
-      li.classList.add('current-week')
-      li.textContent = li.textContent + '*';
-    } else {
-      li.classList.add('future-week');
-    }
-  }
-}
+//     if (i < currentWeekNumber - 1) {
+//       li.classList.add('past-week')
+//     } else if (i == currentWeekNumber - 1) {
+//       li.classList.add('current-week')
+//       li.textContent = li.textContent + '*';
+//     } else {
+//       li.classList.add('future-week');
+//     }
+//   }
+// }
