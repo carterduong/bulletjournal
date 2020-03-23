@@ -9,7 +9,8 @@ export default class weekSelector extends LitElement {
       startDay: { type: Number },
       dateOfYear: { type: Number },
       weeksArray: { type: Array },
-      percentage: { type: Number }
+      percentage: { type: Number },
+      highlightedWeek: { type: Number },
     };
   }
 
@@ -23,6 +24,7 @@ export default class weekSelector extends LitElement {
     this.dateOfYear = now.getDOY();
     this.weeksArray = [ ...Array(this.numberOfWeeks).keys() ].map( i => i + 1 ); // fill an array with week numbers
     this.percentage = this.currentWeek / 52 * 100 | 0 + '%';
+    this.highlightedWeek = this.currentWeek;
     // console.log(`${this.currentWeek} ${this.currentYear} ${this.numberOfWeeks} weeks, startDay: ${this.startDay}`);
   }
 
@@ -30,7 +32,11 @@ export default class weekSelector extends LitElement {
     return html`
       <ol>
         ${this.weeksArray.map( i => html`
-          <li class=${i == this.currentWeek ? 'current-week' : i < this.currentWeek ? 'past-week' : 'future-week'}>
+          <li
+            class="${i == this.currentWeek || i == this.highlightedWeek ? 'highlighted-week' : ''}"
+            id="w${i}"
+            @click="${this.onWeekClick}"
+          >
             ${i == this.currentWeek ? i + '*' : i}
           </li>
         ` )}
@@ -39,12 +45,18 @@ export default class weekSelector extends LitElement {
     `;
   }
 
+  onWeekClick(e) {
+    let clickedElementId = e.composedPath()[0].id;
+    this.highlightedWeek = Number(clickedElementId.substr(1, clickedElementId.length));
+    console.log(this.highlightedWeek);
+  }
+
   static get styles() {
     return css`
       ol,
       span {
         margin: 0;
-        padding: 0 1rem 1rem 1rem;
+        padding: 0;
       }
 
       ol {
@@ -55,8 +67,8 @@ export default class weekSelector extends LitElement {
       li {
         font-variant-numeric: tabular-nums;
         font-size: 0.75rem;
-        // display: block;
         display: inline;
+        color: lightgray;
       }
 
       li:hover {
@@ -68,7 +80,7 @@ export default class weekSelector extends LitElement {
         color: lightgray;
       }
 
-      .current-week {
+      .highlighted-week {
         color: black;
       }
 

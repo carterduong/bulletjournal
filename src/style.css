@@ -106,4 +106,5 @@ textarea:focus {
 week-selector {
   display: flex;
   justify-content: space-between;
+  padding: 0 1rem 1rem 1rem;
 }
