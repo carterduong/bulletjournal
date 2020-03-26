@@ -38,6 +38,7 @@ body {
   background: var(--color-background);
 }
 
+plan-area,
 .plan {
   padding: 1rem;
   display: grid;

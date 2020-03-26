@@ -33,11 +33,11 @@ export default class weekSelector extends LitElement {
       <ol>
         ${this.weeksArray.map( i => html`
           <li
-            class="${i == this.currentWeek || i == this.highlightedWeek ? 'highlighted-week' : ''}"
+            class="${i == this.highlightedWeek ? 'highlighted-week' : ''}"
             id="w${i}"
             @click="${this.onWeekClick}"
           >
-            ${i == this.currentWeek ? i + '*' : i}
+            ${i.toString().padStart(2, 0)}${i == this.currentWeek ? '*' : ''}
           </li>
         ` )}
       </ol> 
@@ -48,7 +48,6 @@ export default class weekSelector extends LitElement {
   onWeekClick(e) {
     let clickedElementId = e.composedPath()[0].id;
     this.highlightedWeek = Number(clickedElementId.substr(1, clickedElementId.length));
-    console.log(this.highlightedWeek);
   }
 
   static get styles() {

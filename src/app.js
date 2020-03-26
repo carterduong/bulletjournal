@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit-element/lit-element.js';
 import weekSelector from './weekSelector.js';
+import planArea from './planArea.js';
 
 const days  = Array.from(document.querySelectorAll(".day"));
 const notes = Array.from(document.querySelectorAll("textarea"));
@@ -45,41 +45,26 @@ Date.prototype.getDOY = function() {
   return dayOfYear;
 };
 
-/* 
-// returns an array of dates returned from a week number
-getDaysFromWeekNumber(weekNumber) {
-  return Array(Dates...) // [Date, Date, Date, Date, Date, Date, Date]
-}
-*/
-
-// Update sidebar and notes
-function onWeekClick(weekNumber) {
-  // sidebar
-  let oldWeek = document.getElementById(currentWeekNumber);
-  oldWeek.classList = "";
-
-  if (weekNumber < currentWeekNumber) {
-    oldWeek.classList.add('future-week'); 
-  } else if (weekNumber > currentWeekNumber) {
-    oldWeek.classList.add('past-week');
-  } else {
-    oldWeek.classList.add('current-week');
+/* Given a week number, return and array of Dates starting on that week's monday */
+Date.prototype.getDatesFromWeekNumber = function(weekNumber) {
+  let jan1 = new Date(2020, 0, 1);
+  let dayNumber = 1;
+  for (let i = 1; i < weekNumber; i++) {
+    dayNumber += 7;
   }
+  dayNumber -= (jan1.getDay() - 1); // offset day of jan1, minus one to start on monday
 
-  let clickedWeek = document.getElementById(weekNumber);
-  clickedWeek.classList.add('current-week');
-  currentWeekNumber = weekNumber;
+  return Array(7).fill().map((item, index) => {
+    let day = new Date(jan1.getFullYear(), 0, 1);
+    day.setDate(dayNumber + index);
+    return day;
+  });
 }
 
 function updateDates(currentWeek, days) {
   for (let [index, day] of days.entries()) {
     day.id = `w${currentWeek}d${index}`;
   }
-}
-
-function updateNoteIds(weekNumber) {
-  notes.forEach(note => {
-  });
 }
 
 function hightlightCurrentDay() {
@@ -114,6 +99,7 @@ function unhighlightDay(day) {
 }
 
 /* Custom Elements */
+customElements.define('plan-area', planArea);
 customElements.define('week-selector', weekSelector);
 
 /* Initial Setup */
@@ -134,30 +120,4 @@ notes.forEach(note => {
 });
 
 let currentWeekNumber = new Date().getCurrentWeekNumber();
-// document.getElementById('percentage').textContent = `${(currentWeekNumber / 52 * 100 | 0) + '%'}`;
 updateDates(currentWeekNumber, days);
-
-// if ('content' in document.createElement('template')) {
-//   let template = document.querySelector('#weekrow');
-//   let menu = document.querySelector('.weeks');
-
-//   for (let i = 0; i < 52; i++) {
-//     var clone = template.content.cloneNode(true);
-//     var li = clone.querySelectorAll("li")[0];
-//     li.id =`${i + 1}`;
-//     li.textContent = `${i + 1}`;
-//     li.onclick = () => {
-//       onWeekClick(i + 1);
-//     };
-//     menu.appendChild(clone);
-
-//     if (i < currentWeekNumber - 1) {
-//       li.classList.add('past-week')
-//     } else if (i == currentWeekNumber - 1) {
-//       li.classList.add('current-week')
-//       li.textContent = li.textContent + '*';
-//     } else {
-//       li.classList.add('future-week');
-//     }
-//   }
-// }
