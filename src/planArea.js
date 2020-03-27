@@ -21,12 +21,23 @@ export default class planArea extends LitElement {
     this.currentMonth = now.getMonth() + 1;
     this.currentYear = now.getFullYear();
     this.dates = now.getDatesFromWeekNumber(this.currentWeek);
-    this.notes = Array(5).fill('', 0, 5).map((item, index) => {
+    this.notes = Array(9).fill('', 0, 9).map((item, index) => {
       let date = this.dates[index];
-      let dateString = `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
+      let dateString = '';
+
+      if (index < 5) {
+        dateString = `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
+      } else if (index == 5) {
+        dateString = `weekend-${this.currentWeek}`;
+      } else if (index == 6) {
+        dateString = `this-week-${this.currentWeek}`;
+      } else if (index == 7) {
+        dateString = `this-month-${this.currentMonth}`;
+      } else if (index == 8) {
+        dateString = `next-month-${this.currentMonth}`;
+      }
       return localStorage.getItem(dateString);
     });
-    console.log(this.now.getDOY() == this.dates[3].getDOY());
   }
 
   render() {
@@ -34,59 +45,71 @@ export default class planArea extends LitElement {
       <label for="${this.printDate(this.dates[0], true)}" class="notes day" aria-current="${ifDefined(this.now.getDOY() == this.dates[0].getDOY() ? 'date' : undefined)}">
         <span class="heading">Monday<span class="date">${this.printDate(this.dates[0])}</span></span>
         <textarea
-          spellcheck="false" 
           id="${this.printDate(this.dates[0], true)}"
+          spellcheck="false" 
           autofocus="${ifDefined(this.now.getDOY() == this.dates[0].getDOY() ? 'true' : undefined)}"
           @input="${this.saveInput}">${this.notes[0]}</textarea>
       </label>
       <label for="${this.printDate(this.dates[1], true)}" class="notes day" aria-current="${ifDefined(this.now.getDOY() == this.dates[1].getDOY() ? 'date' : undefined)}">
         <span class="heading">Tuesday<span class="date">${this.printDate(this.dates[1])}</span></span>
         <textarea
-          spellcheck="false" 
           id="${this.printDate(this.dates[1], true)}" 
+          spellcheck="false" 
           autofocus="${ifDefined(this.now.getDOY() == this.dates[1].getDOY() ? 'true' : undefined)}"
           @input="${this.saveInput}">${this.notes[1]}</textarea>
       </label>
       <label for="${this.printDate(this.dates[2], true)}" class="notes day" aria-current="${ifDefined(this.now.getDOY() == this.dates[2].getDOY() ? 'date' : undefined)}">
         <span class="heading">Wednesday<span class="date">${this.printDate(this.dates[2])}</span></span>
         <textarea
-          spellcheck="false" 
           id="${this.printDate(this.dates[2], true)}"
+          spellcheck="false" 
           autofocus="${ifDefined(this.now.getDOY() == this.dates[2].getDOY() ? 'true' : undefined)}"
           @input="${this.saveInput}">${this.notes[2]}</textarea>
       </label>
       <label for="${this.printDate(this.dates[3], true)}" class="notes day" aria-current="${ifDefined(this.now.getDOY() == this.dates[3].getDOY() ? 'date' : undefined)}">
         <span class="heading">Thursday<span class="date">${this.printDate(this.dates[3])}</span></span>
         <textarea
-          spellcheck="false" 
           id="${this.printDate(this.dates[3], true)}"
+          spellcheck="false" 
           autofocus="${this.now.getDOY() == this.dates[3].getDOY() ? 'true' : 'false'}"
           @input="${this.saveInput}">${this.notes[3]}</textarea>
       </label>
       <label for="${this.printDate(this.dates[4], true)}" class="notes day" aria-current="${ifDefined(this.now.getDOY() == this.dates[4].getDOY() ? 'date' : undefined)}">
         <span class="heading">Friday <span class="date">${this.printDate(this.dates[4])}</span></span>
         <textarea
+          id="${this.printDate(this.dates[4], true)}"
           spellcheck="false" 
-          id="${this.printDate(this.dates[4]), true}"
           autofocus="${this.now.getDOY() == this.dates[4].getDOY() ? 'true' : 'false'}"
           @input="${this.saveInput}">${this.notes[4]}</textarea>
       </label>
       <label for="weekend-${this.currentWeek}" class="notes weekend">
         <span class="heading">Weekend</span>
-        <textarea id="weekend-${this.currentWeek}" spellcheck="false"></textarea>
+        <textarea
+          id="weekend-${this.currentWeek}"
+          spellcheck="false" 
+          @input="${this.saveInput}">${this.notes[5]}</textarea>
       </label>
 
       <label for="this-week-${this.currentWeek}" class="notes week">
         <span class="heading">This Week</span>
-        <textarea id="this-week-${this.currentWeek}" spellcheck="false"></textarea>
+        <textarea
+          id="this-week-${this.currentWeek}"
+          spellcheck="false"
+          @input="${this.saveInput}">${this.notes[6]}</textarea>
       </label>
       <label for="this-month-${this.currentMonth}" class="notes month">
         <span class="heading">This month</span>
-        <textarea id="this-month-${this.currentMonth}" spellcheck="false"></textarea>
+        <textarea
+          id="this-month-${this.currentMonth}"
+          spellcheck="false"
+          @input="${this.saveInput}">${this.notes[7]}</textarea>
       </label>
       <label for="next-month-${this.currentMonth}" class="notes month">
         <span class="heading">Next month</span>
-        <textarea id="next-month-${this.currentMonth}" spellcheck="false"></textarea>
+          <textarea
+            id="next-month-${this.currentMonth}"
+            spellcheck="false"
+            @input="${this.saveInput}">${this.notes[8]}</textarea>
       </label>
     `
   }
@@ -104,31 +127,31 @@ export default class planArea extends LitElement {
     return dateString;
   }
 
-  hightlightCurrentDay() {
-    if (document.visibilityState != 'visible') { return; }
+  // hightlightCurrentDay() {
+  //   if (document.visibilityState != 'visible') { return; }
 
-    const days  = Array.from(document.querySelectorAll(".day"));
-    var today = new Date();
-    console.log(days);
+  //   const days  = Array.from(document.querySelectorAll(".day"));
+  //   var today = new Date();
+  //   console.log(days);
 
-    days.forEach((day, index) => {
-      unhighlightDay(day);
-      if (index === today.getDay() - 1) {
-        highlightDay(day, (today.getMonth() + 1) + "." + (today.getDate()));
-      }
-    });
-  } 
+  //   days.forEach((day, index) => {
+  //     unhighlightDay(day);
+  //     if (index === today.getDay() - 1) {
+  //       highlightDay(day, (today.getMonth() + 1) + "." + (today.getDate()));
+  //     }
+  //   });
+  // } 
 
-  highlightDay(day, dateString) {
-    day.setAttribute("aria-current", "date");
+  // highlightDay(day, dateString) {
+  //   day.setAttribute("aria-current", "date");
 
-    let span = document.createElement("span");
-    span.innerHTML = dateString;
+  //   let span = document.createElement("span");
+  //   span.innerHTML = dateString;
 
-    day.querySelector("textarea").setAttribute("autofocus", true);
-    day.querySelector("textarea").focus();
-    day.querySelector(".heading").append(span);
-  }
+  //   day.querySelector("textarea").setAttribute("autofocus", true);
+  //   day.querySelector("textarea").focus();
+  //   day.querySelector(".heading").append(span);
+  // }
 
   static get styles() {
     return css`
