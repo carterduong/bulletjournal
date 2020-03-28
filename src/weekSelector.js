@@ -25,7 +25,6 @@ export default class weekSelector extends LitElement {
     this.weeksArray = [ ...Array(this.numberOfWeeks).keys() ].map( i => i + 1 ); // fill an array with week numbers
     this.percentage = this.currentWeek / 52 * 100 | 0 + '%';
     this.highlightedWeek = this.currentWeek;
-    // console.log(`${this.currentWeek} ${this.currentYear} ${this.numberOfWeeks} weeks, startDay: ${this.startDay}`);
   }
 
   render() {
@@ -34,7 +33,7 @@ export default class weekSelector extends LitElement {
         ${this.weeksArray.map( i => html`
           <li
             class="${i == this.highlightedWeek ? 'highlighted-week' : ''}"
-            id="w${i}"
+            id="${i}"
             @click="${this.onWeekClick}"
           >
             ${i.toString().padStart(2, 0)}${i == this.currentWeek ? '*' : ''}
@@ -47,7 +46,12 @@ export default class weekSelector extends LitElement {
 
   onWeekClick(e) {
     let clickedElementId = e.composedPath()[0].id;
-    this.highlightedWeek = Number(clickedElementId.substr(1, clickedElementId.length));
+    this.highlightedWeek = Number(clickedElementId);
+    let weekClicked = new CustomEvent('week-clicked', {
+      detail: { week: clickedElementId },
+      bubbles: true, 
+      composed: true });
+    this.dispatchEvent(weekClicked);
   }
 
   static get styles() {

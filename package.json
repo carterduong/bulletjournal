@@ -17,11 +17,11 @@
   },
   "homepage": "https://github.com/carterduong/bulletjournal#readme",
   "dependencies": {
-    "lit-element": "^2.2.1"
+    "lit-element": "^2.3.1"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^5.1.1",
-    "webpack": "^4.42.0",
+    "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",
     "webpack-dev-server": "^3.10.3"
   }

@@ -45,7 +45,7 @@ Date.prototype.getDOY = function() {
   return dayOfYear;
 };
 
-/* Given a week number, return and array of Dates starting on that week's monday */
+/* Given a week number, return an array of Dates starting on that week's monday */
 Date.prototype.getDatesFromWeekNumber = function(weekNumber) {
   let jan1 = new Date(2020, 0, 1);
   let dayNumber = 1;
@@ -101,6 +101,8 @@ function unhighlightDay(day) {
 /* Custom Elements */
 customElements.define('plan-area', planArea);
 customElements.define('week-selector', weekSelector);
+
+// document.addEventListener('week-clicked', (e) => console.log(e))
 
 /* Initial Setup */
 hightlightCurrentDay();

@@ -43,7 +43,7 @@ plan-area,
   padding: 1rem;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 66% auto;
+  grid-template-rows: 66% calc(33% - 1rem);
   grid-gap: .5rem;
   flex-basis: 100%;
 }
