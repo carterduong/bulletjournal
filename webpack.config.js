@@ -5,7 +5,7 @@ module.exports = {
     entry: './src/app.js',
     mode: 'development',
     output: {
-        path: path.resolve(__dirname, 'dist'),
+        path: path.resolve(__dirname, ''),
         filename: 'app.js'
     },
     devServer: {
