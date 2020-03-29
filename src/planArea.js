@@ -60,7 +60,7 @@ export default class planArea extends LitElement {
         <textarea
           id="${this.printDate(this.dates[3], true)}"
           spellcheck="false" 
-          autofocus="${this.now.getDOY() == this.dates[3].getDOY() ? 'true' : 'false'}"
+          autofocus="${ifDefined(this.now.getDOY() == this.dates[3].getDOY() ? 'true' : undefined)}"
           @input="${this.saveInput}"
           .value="${this.notes[Object.keys(this.notes)[3]]}"></textarea>
       </label>
@@ -69,15 +69,20 @@ export default class planArea extends LitElement {
         <textarea
           id="${this.printDate(this.dates[4], true)}"
           spellcheck="false" 
-          autofocus="${this.now.getDOY() == this.dates[4].getDOY() ? 'true' : 'false'}"
+          autofocus="${ifDefined(this.now.getDOY() == this.dates[4].getDOY() ? 'true' : undefined)}"
           @input="${this.saveInput}"
           .value="${this.notes[Object.keys(this.notes)[4]]}"></textarea>
       </label>
-      <label for="weekend-${this.currentWeek}" class="notes weekend">
+      <label
+        for="weekend-${this.currentWeek}"
+        class="notes weekend" 
+        aria-current="${ifDefined(this.now.getDOY() == this.dates[5].getDOY() || this.now.getDOY() == this.dates[6].getDOY()? 'date' : undefined)}">
         <span class="heading">Weekend</span>
         <textarea
           id="weekend-${this.currentWeek}"
           spellcheck="false" 
+          autofocus="${ifDefined(this.now.getDOY() == this.dates[5].getDOY() ||
+                                 this.now.getDOY() == this.dates[6].getDOY() ? 'true' : undefined)}"
           @input="${this.saveInput}"
           .value="${this.notes[Object.keys(this.notes)[5]]}"></textarea>
       </label>
@@ -110,13 +115,15 @@ export default class planArea extends LitElement {
     `
   }
 
+  /* Update IDs and set current week according to it's Monday */
   updateWeek(event) {
     let clickedWeek = event.detail.week;
     this.currentWeek = clickedWeek;
     this.dates = new Date().getDatesFromWeekNumber(clickedWeek);
-
+    clickedWeek == this.now.getCurrentWeekNumber() ? 
+      this.currentMonth = this.now.getMonth() + 1 :
+      this.currentMonth = this.dates[0].getMonth() + 1;
     this.fetchNotes();
-    console.log(this.notes);
   }
   
   fetchNotes() {
@@ -140,7 +147,7 @@ export default class planArea extends LitElement {
       
       this.notes[dateString] = localStorage.getItem(dateString);
     }
-    console.log(this.notes);
+    // console.log(this.notes);
   }
 
   saveInput(event) {
