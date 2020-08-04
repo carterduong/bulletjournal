@@ -86,6 +86,12 @@ export default class weekSelector extends LitElement {
       .highlighted-week {
         color: black;
       }
+    
+      @media (prefers-color-scheme: dark) {
+        .highlighted-week {
+          color: lightgray;
+        }
+      }
 
       #percentage {
         font-size: 0.75rem;
