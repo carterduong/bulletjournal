@@ -15,8 +15,8 @@ document.addEventListener("keydown", e => {
 Date.prototype.getCurrentWeekNumber = function() {
   var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
   var dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  d.setUTCDate(d.getUTCDate() + 5 - dayNum);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
 };
 
@@ -47,7 +47,8 @@ Date.prototype.getDOY = function() {
 
 /* Given a week number, return an array of Dates starting on that week's monday */
 Date.prototype.getDatesFromWeekNumber = function(weekNumber) {
-  let jan1 = new Date(2020, 0, 1);
+  const currentYear = new Date().getFullYear()
+  let jan1 = new Date(currentYear, 0, 1);
   let dayNumber = 1;
   for (let i = 1; i < weekNumber; i++) {
     dayNumber += 7;
