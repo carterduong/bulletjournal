@@ -23,7 +23,7 @@ export default class weekSelector extends LitElement {
     this.startDay = new Date(this.currentYear, 0, 1).getDay();
     this.dateOfYear = now.getDOY();
     this.weeksArray = [ ...Array(this.numberOfWeeks).keys() ].map( i => i + 1 ); // fill an array with week numbers
-    this.percentage = this.currentWeek / 52 * 100 | 0 + '%';
+    this.percentage = this.currentWeek / this.numberOfWeeks * 100 | 0;
     this.highlightedWeek = this.currentWeek;
   }
 

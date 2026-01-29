@@ -21,12 +21,9 @@ Date.prototype.getCurrentWeekNumber = function() {
 };
 
 Date.prototype.getNumberofWeeks = function() {
-  var d = new Date(new Date().getFullYear(), 11, 31);
-  var first = new Date(d.getFullYear(),0,1);
-  var dayms = 1000 * 60 * 60 * 24;
-  var numday = ((d - first)/dayms)
-  var weeks = Math.ceil((numday + first.getDay()+1) / 7) ; 
-  return weeks
+  // ISO 8601: Dec 28 is always in the last week of the year
+  var dec28 = new Date(this.getFullYear(), 11, 28);
+  return dec28.getCurrentWeekNumber();
 }
 
 Date.prototype.isLeapYear = function() {
