@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element/lit-element.js';
+import { LitElement, html, css } from "lit-element/lit-element.js";
 
 export default class weekSelector extends LitElement {
   static get properties() {
@@ -22,35 +22,44 @@ export default class weekSelector extends LitElement {
     this.numberOfWeeks = now.getNumberofWeeks();
     this.startDay = new Date(this.currentYear, 0, 1).getDay();
     this.dateOfYear = now.getDOY();
-    this.weeksArray = [ ...Array(this.numberOfWeeks).keys() ].map( i => i + 1 ); // fill an array with week numbers
-    this.percentage = this.currentWeek / this.numberOfWeeks * 100 | 0;
+    this.weeksArray = [...Array(this.numberOfWeeks).keys()].map((i) => i + 1); // fill an array with week numbers
+    this.percentage = ((this.currentWeek / this.numberOfWeeks) * 100) | 0;
     this.highlightedWeek = this.currentWeek;
   }
 
   render() {
     return html`
-      <ol>
-        ${this.weeksArray.map( i => html`
-          <li
-            class="${i == this.highlightedWeek ? 'highlighted-week' : ''}"
-            id="${i}"
-            @click="${this.onWeekClick}"
-          >
-            ${i.toString().padStart(2, 0)}${i == this.currentWeek ? '*' : ''}
-          </li>
-        ` )}
-      </ol> 
-      <span id="percentage">${this.percentage}%</span>
+      <span>
+        <span id="current-year">${this.currentYear}</span>
+      </span>
+
+      <span style="display: flex; flex-direction: row; gap: 1rem;">
+        <ol>
+          ${this.weeksArray.map(
+            (i) => html`
+              <li
+                class="${i == this.highlightedWeek ? "highlighted-week" : ""}"
+                id="${i}"
+                @click="${this.onWeekClick}"
+              >
+                ${i.toString().padStart(2, 0)}
+              </li>
+            `,
+          )}
+        </ol>
+        <span id="percentage">${this.percentage}%</span>
+      </span>
     `;
   }
 
   onWeekClick(e) {
     let clickedElementId = e.composedPath()[0].id;
     this.highlightedWeek = Number(clickedElementId);
-    let weekClicked = new CustomEvent('week-clicked', {
+    let weekClicked = new CustomEvent("week-clicked", {
       detail: { week: clickedElementId },
-      bubbles: true, 
-      composed: true });
+      bubbles: true,
+      composed: true,
+    });
     this.dispatchEvent(weekClicked);
   }
 
@@ -86,13 +95,14 @@ export default class weekSelector extends LitElement {
       .highlighted-week {
         color: black;
       }
-    
+
       @media (prefers-color-scheme: dark) {
         .highlighted-week {
           color: lightgray;
         }
       }
 
+      #current-year,
       #percentage {
         font-size: 0.75rem;
       }
