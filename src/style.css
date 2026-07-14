@@ -28,11 +28,14 @@
   }
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
   font-family: system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  height: 100%;
   line-height: 1;
   font-size: .875rem;
   background: var(--color-background);
@@ -48,9 +51,9 @@ body {
   padding: 1rem;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 66% auto;
+  grid-template-rows: 66% calc(34% - 1rem);
   grid-gap: .5rem;
-  flex-basis: 100%;
+  flex: 1;
 }
 
 .heading {
