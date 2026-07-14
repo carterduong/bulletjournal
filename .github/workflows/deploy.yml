@@ -2,20 +2,23 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [master]
+    branches: ['**']
+  pull_request:
+    types: [opened, synchronize, reopened]
+  delete:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
+  pull-requests: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
+    if: github.event_name != 'delete'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,18 +28,73 @@ jobs:
           node-version: 22
 
       - run: npm install
-      - run: npm run build
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Determine base path
+        id: base
+        run: |
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            echo "path=/bulletjournal/" >> "$GITHUB_OUTPUT"
+            echo "dest=." >> "$GITHUB_OUTPUT"
+          else
+            SAFE_BRANCH=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            echo "path=/bulletjournal/branch/${SAFE_BRANCH}/" >> "$GITHUB_OUTPUT"
+            echo "dest=branch/${SAFE_BRANCH}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - run: npm run build -- --base "${{ steps.base.outputs.path }}"
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: ${{ steps.base.outputs.dest }}
+          keep_files: true
 
-  deploy:
-    needs: build
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://${{ github.repository_owner }}.github.io${{ steps.base.outputs.path }}`;
+            const body = `🚀 Preview deployed to: ${url}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.startsWith('🚀 Preview deployed to:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  cleanup:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Remove branch preview
+        run: |
+          SAFE_BRANCH=$(echo "${{ github.event.ref }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          if [ -d "branch/${SAFE_BRANCH}" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git rm -rf "branch/${SAFE_BRANCH}"
+            git commit -m "Remove preview for deleted branch: ${{ github.event.ref }}"
+            git push
+          fi
