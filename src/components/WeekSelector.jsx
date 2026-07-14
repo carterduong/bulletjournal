@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getCurrentWeekNumber, getNumberOfWeeks, getDayOfYear } from '../utils/dateUtils';
+import { getCurrentWeekNumber, getNumberOfWeeks } from '../utils/dateUtils';
 
 export default function WeekSelector({ onWeekClick }) {
   const now = new Date();
@@ -18,17 +18,17 @@ export default function WeekSelector({ onWeekClick }) {
   }
 
   return (
-    <div className="week-selector">
+    <div className="flex select-none justify-between px-4 pb-4">
       <span>
-        <span id="current-year">{currentYear}</span>
+        <span className="text-xs">{currentYear}</span>
       </span>
 
-      <span className="week-list-wrapper">
-        <ol>
+      <span className="flex flex-row gap-4">
+        <ol className="m-0 list-none cursor-pointer p-0">
           {weeksArray.map((i) => (
             <li
               key={i}
-              className={i === highlightedWeek ? 'highlighted-week' : ''}
+              className={`inline text-xs tabular-nums ${i === highlightedWeek ? 'text-black dark:text-gray-300' : 'text-gray-300 hover:text-black dark:hover:text-gray-300'}`}
               id={i}
               onClick={handleWeekClick}
             >
@@ -36,7 +36,7 @@ export default function WeekSelector({ onWeekClick }) {
             </li>
           ))}
         </ol>
-        <span id="percentage">{percentage}%</span>
+        <span className="text-xs">{percentage}%</span>
       </span>
     </div>
   );
