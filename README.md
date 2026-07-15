@@ -22,6 +22,8 @@ Open http://localhost:5173 in your browser.
 | `npm run dev` | Start development server with HMR |
 | `npm run build` | Build for production (output in `dist/`) |
 | `npm run preview` | Preview production build locally |
+| `npm test` | Run unit tests once |
+| `npm run test:watch` | Run unit tests in watch mode |
 
 ## Todo
 
