@@ -6,8 +6,10 @@ import {
   ReactNodeViewRenderer,
   useEditor,
 } from '@tiptap/react';
+import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
-import StarterKit from '@tiptap/starter-kit';
+import Text from '@tiptap/extension-text';
+import { UndoRedo } from '@tiptap/extensions';
 import { documentToNote, noteToDocument } from '../utils/noteUtils';
 
 function ParagraphWithMoveAction({ editor, extension, getPos, node }) {
@@ -69,25 +71,9 @@ export default function DailyNoteEditor({
   onMoveLineRef.current = onMoveLine;
 
   const extensions = useMemo(() => [
-    StarterKit.configure({
-      blockquote: false,
-      bold: false,
-      bulletList: false,
-      code: false,
-      codeBlock: false,
-      hardBreak: false,
-      heading: false,
-      horizontalRule: false,
-      italic: false,
-      link: false,
-      listItem: false,
-      listKeymap: false,
-      orderedList: false,
-      paragraph: false,
-      strike: false,
-      trailingNode: false,
-      underline: false,
-    }),
+    Document,
+    Text,
+    UndoRedo,
     MoveableParagraph.configure({
       onMoveLine: (lineIndex) => onMoveLineRef.current(lineIndex),
     }),
