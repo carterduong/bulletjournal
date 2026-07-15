@@ -18,7 +18,7 @@ export default function WeekSelector({ onWeekClick }) {
   }
 
   return (
-    <div className="flex select-none justify-between px-4 pb-4">
+    <div className="col-span-6 flex select-none justify-between">
       <span>
         <span className="text-xs">{currentYear}</span>
       </span>

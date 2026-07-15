@@ -88,8 +88,7 @@ export default function PlanArea() {
   }
 
   return (
-    <>
-      <div className="grid flex-1 grid-cols-6 grid-rows-[66%_calc(34%-1rem)] gap-2 p-4">
+    <div className="grid flex-1 grid-cols-6 grid-rows-[66%_1fr_auto] gap-2 p-4">
         {DAY_NAMES.map((name, i) => {
           const today = isToday(i);
           return (
@@ -174,9 +173,7 @@ export default function PlanArea() {
             onChange={(e) => handleInput(noteKeys[8], e.target.value)}
           />
         </label>
-      </div>
-
       <WeekSelector onWeekClick={handleWeekClick} />
-    </>
+    </div>
   );
 }
