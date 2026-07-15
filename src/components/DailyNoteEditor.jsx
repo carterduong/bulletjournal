@@ -34,8 +34,13 @@ function ParagraphWithMoveAction({ editor, extension, getPos, node }) {
           aria-label="Move item to next day"
           title="Move to next day"
           className="absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--color-action-hover) focus:opacity-100 focus:outline-none"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={handleMove}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            handleMove();
+          }}
+          onClick={(event) => {
+            if (event.detail === 0) handleMove();
+          }}
         >
           →
         </button>
