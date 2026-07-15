@@ -2,6 +2,15 @@ export function splitNote(value) {
   return value === '' ? [''] : value.split('\n');
 }
 
+export function getNextDailyKey(dayIndex, noteKeys, mondayDate) {
+  if (dayIndex < 4) return noteKeys[dayIndex + 1];
+  if (dayIndex === 4) return noteKeys[5];
+
+  const nextMonday = new Date(mondayDate);
+  nextMonday.setDate(nextMonday.getDate() + 7);
+  return `${nextMonday.getMonth() + 1}.${nextMonday.getDate()}.${nextMonday.getFullYear()}`;
+}
+
 export function appendLines(destination, lines) {
   if (lines.length === 0) return destination;
 

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { appendLines, moveIncompleteLines, moveLine, splitNote } from './noteUtils';
+import {
+  appendLines,
+  getNextDailyKey,
+  moveIncompleteLines,
+  moveLine,
+  splitNote,
+} from './noteUtils';
 
 describe('splitNote', () => {
   it('uses explicit newlines as item boundaries', () => {
@@ -14,6 +20,18 @@ describe('appendLines', () => {
   it('appends to populated notes without adding duplicate separators', () => {
     expect(appendLines('existing', ['moved'])).toBe('existing\nmoved');
     expect(appendLines('existing\n', ['moved'])).toBe('existing\nmoved');
+  });
+});
+
+describe('getNextDailyKey', () => {
+  const noteKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'weekend'];
+
+  it('moves Friday items into the current weekend', () => {
+    expect(getNextDailyKey(4, noteKeys, new Date(2026, 6, 13))).toBe('weekend');
+  });
+
+  it('moves weekend items into the following Monday', () => {
+    expect(getNextDailyKey(5, noteKeys, new Date(2026, 6, 13))).toBe('7.20.2026');
   });
 });
 

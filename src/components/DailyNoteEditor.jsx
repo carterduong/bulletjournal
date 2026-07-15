@@ -80,9 +80,20 @@ export default function DailyNoteEditor({
   return (
     <div
       id={id}
-      className={`min-h-0 grow overflow-y-auto p-2 leading-normal ${
+      className={`min-h-0 grow cursor-text overflow-y-auto p-2 leading-normal ${
         today ? 'text-(--color-today-text)' : 'text-(--color-day-text)'
       }`}
+      onMouseDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        event.preventDefault();
+        const lastIndex = items.length - 1;
+        const textarea = itemRefs.current[lastIndex];
+        if (textarea) {
+          textarea.focus();
+          const offset = items[lastIndex].length;
+          textarea.setSelectionRange(offset, offset);
+        }
+      }}
     >
       {items.map((item, index) => (
         <div className="group relative min-h-5" key={index}>

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { getCurrentWeekNumber, getDayOfYear, getDatesFromWeekNumber } from '../utils/dateUtils';
-import { moveIncompleteLines, moveLine } from '../utils/noteUtils';
+import { getNextDailyKey, moveIncompleteLines, moveLine } from '../utils/noteUtils';
 import DailyNoteEditor from './DailyNoteEditor';
 import WeekSelector from './WeekSelector';
 
@@ -71,12 +71,7 @@ export default function PlanArea() {
   const noteKeys = buildNoteKeys(dates, currentWeek, currentMonth);
 
   function getDestinationKey(dayIndex) {
-    if (dayIndex < 4) return noteKeys[dayIndex + 1];
-    if (dayIndex === 4) return noteKeys[5];
-
-    const nextMonday = new Date(dates[0]);
-    nextMonday.setDate(nextMonday.getDate() + 7);
-    return formatDate(nextMonday, true);
+    return getNextDailyKey(dayIndex, noteKeys, dates[0]);
   }
 
   function moveItems(dayIndex, transform) {
