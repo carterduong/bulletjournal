@@ -28,7 +28,7 @@ export default function WeekSelector({ onWeekClick }) {
           {weeksArray.map((i) => (
             <li
               key={i}
-              className={`inline text-xs tabular-nums ${i === highlightedWeek ? 'text-black dark:text-gray-300' : 'text-gray-300 hover:text-black dark:hover:text-gray-300'}`}
+              className={`inline px-[1px] text-xs tabular-nums ${i === highlightedWeek ? 'text-black dark:text-gray-300' : 'text-gray-300 hover:text-black dark:hover:text-gray-300'}`}
               id={i}
               onClick={handleWeekClick}
             >
