@@ -21,11 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
-      - run: npm install
+      - run: pnpm install --frozen-lockfile
 
       - name: Determine base path
         id: base
@@ -39,7 +42,7 @@ jobs:
             echo "dest=branch/${SAFE_BRANCH}" >> "$GITHUB_OUTPUT"
           fi
 
-      - run: npm run build -- --base "${{ steps.base.outputs.path }}"
+      - run: pnpm run build --base "${{ steps.base.outputs.path }}"
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
