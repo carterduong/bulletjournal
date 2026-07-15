@@ -2,6 +2,26 @@ export function splitNote(value) {
   return value === '' ? [''] : value.split('\n');
 }
 
+export function noteToDocument(value) {
+  return {
+    type: 'doc',
+    content: splitNote(value).map((line) => ({
+      type: 'paragraph',
+      ...(line === '' ? {} : {
+        content: [{ type: 'text', text: line }],
+      }),
+    })),
+  };
+}
+
+export function documentToNote(document) {
+  return document.content
+    .map((paragraph) => paragraph.content
+      ?.map((node) => node.text || '')
+      .join('') || '')
+    .join('\n');
+}
+
 export function getNextDailyKey(dayIndex, noteKeys, mondayDate) {
   if (dayIndex < 4) return noteKeys[dayIndex + 1];
   if (dayIndex === 4) return noteKeys[5];

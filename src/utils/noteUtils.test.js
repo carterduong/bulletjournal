@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   appendLines,
+  documentToNote,
   getNextDailyKey,
   moveIncompleteLines,
   moveLine,
+  noteToDocument,
   splitNote,
 } from './noteUtils';
 
@@ -13,6 +15,27 @@ describe('splitNote', () => {
       'a visually wrapped item',
       'next item',
     ]);
+  });
+});
+
+describe('plaintext document conversion', () => {
+  it('round-trips explicit and trailing blank lines', () => {
+    const note = 'first\n\nthird\n';
+    expect(documentToNote(noteToDocument(note))).toBe(note);
+  });
+
+  it('keeps linked text as plaintext', () => {
+    expect(documentToNote({
+      type: 'doc',
+      content: [{
+        type: 'paragraph',
+        content: [{
+          type: 'text',
+          text: 'https://example.com',
+          marks: [{ type: 'link', attrs: { href: 'https://example.com' } }],
+        }],
+      }],
+    })).toBe('https://example.com');
   });
 });
 

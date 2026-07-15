@@ -1,5 +1,59 @@
-import { useLayoutEffect, useRef } from 'react';
-import { splitNote } from '../utils/noteUtils';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+  EditorContent,
+  NodeViewContent,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+  useEditor,
+} from '@tiptap/react';
+import Paragraph from '@tiptap/extension-paragraph';
+import StarterKit from '@tiptap/starter-kit';
+import { documentToNote, noteToDocument } from '../utils/noteUtils';
+
+function ParagraphWithMoveAction({ editor, extension, getPos, node }) {
+  function handleMove() {
+    const position = getPos();
+    let lineIndex = 0;
+
+    editor.state.doc.forEach((_, offset, index) => {
+      if (offset === position) lineIndex = index;
+    });
+
+    extension.options.onMoveLine(lineIndex);
+  }
+
+  return (
+    <NodeViewWrapper className="group relative min-h-5 pr-7">
+      <NodeViewContent as="span" className="block min-h-5" />
+      {node.textContent !== '' && (
+        <button
+          type="button"
+          contentEditable={false}
+          aria-label="Move item to next day"
+          title="Move to next day"
+          className="absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--color-action-hover) focus:opacity-100 focus:outline-none"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={handleMove}
+        >
+          →
+        </button>
+      )}
+    </NodeViewWrapper>
+  );
+}
+
+const MoveableParagraph = Paragraph.extend({
+  addOptions() {
+    return {
+      ...this.parent?.(),
+      onMoveLine: () => {},
+    };
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ParagraphWithMoveAction);
+  },
+});
 
 export default function DailyNoteEditor({
   id,
@@ -9,121 +63,69 @@ export default function DailyNoteEditor({
   autoFocus = false,
   today = false,
 }) {
-  const itemRefs = useRef([]);
-  const pendingFocus = useRef(null);
-  const items = splitNote(value);
+  const onChangeRef = useRef(onChange);
+  const onMoveLineRef = useRef(onMoveLine);
+  onChangeRef.current = onChange;
+  onMoveLineRef.current = onMoveLine;
 
-  useLayoutEffect(() => {
-    for (const textarea of itemRefs.current) {
-      if (!textarea) continue;
-      textarea.style.height = '0';
-      textarea.style.height = `${Math.max(textarea.scrollHeight, 20)}px`;
+  const extensions = useMemo(() => [
+    StarterKit.configure({
+      blockquote: false,
+      bold: false,
+      bulletList: false,
+      code: false,
+      codeBlock: false,
+      hardBreak: false,
+      heading: false,
+      horizontalRule: false,
+      italic: false,
+      link: false,
+      listItem: false,
+      listKeymap: false,
+      orderedList: false,
+      paragraph: false,
+      strike: false,
+      trailingNode: false,
+      underline: false,
+    }),
+    MoveableParagraph.configure({
+      onMoveLine: (lineIndex) => onMoveLineRef.current(lineIndex),
+    }),
+  ], []);
+
+  const editor = useEditor({
+    extensions,
+    content: noteToDocument(value),
+    editorProps: {
+      attributes: {
+        class: 'min-h-full cursor-text whitespace-pre-wrap break-words focus:outline-none',
+        'aria-label': 'Daily notes',
+      },
+    },
+    onUpdate: ({ editor: updatedEditor }) => {
+      onChangeRef.current(documentToNote(updatedEditor.getJSON()));
+    },
+  }, []);
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    if (documentToNote(editor.getJSON()) === value) return;
+    editor.commands.setContent(noteToDocument(value), { emitUpdate: false });
+  }, [editor, value]);
+
+  useEffect(() => {
+    if (autoFocus && editor && !editor.isDestroyed) {
+      editor.commands.focus('start');
     }
-
-    if (!pendingFocus.current) return;
-    const { index, offset } = pendingFocus.current;
-    const textarea = itemRefs.current[index];
-    if (textarea) {
-      textarea.focus();
-      textarea.setSelectionRange(offset, offset);
-    }
-    pendingFocus.current = null;
-  }, [value]);
-
-  function updateItems(nextItems, focus) {
-    if (focus) pendingFocus.current = focus;
-    onChange(nextItems.join('\n'));
-  }
-
-  function handleItemChange(index, event) {
-    const nextValue = event.target.value;
-    const selectionStart = event.target.selectionStart;
-    const replacement = nextValue.split('\n');
-    const nextItems = [...items];
-    nextItems.splice(index, 1, ...replacement);
-
-    if (replacement.length > 1) {
-      const textBeforeCaret = nextValue.slice(0, selectionStart);
-      const focusIndex = textBeforeCaret.split('\n').length - 1;
-      const lastBreak = textBeforeCaret.lastIndexOf('\n');
-      updateItems(nextItems, {
-        index: index + focusIndex,
-        offset: selectionStart - lastBreak - 1,
-      });
-      return;
-    }
-
-    updateItems(nextItems);
-  }
-
-  function handleKeyDown(index, event) {
-    const textarea = event.currentTarget;
-    const atStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
-    const atEnd = textarea.selectionStart === items[index].length
-      && textarea.selectionEnd === items[index].length;
-
-    if (event.key === 'Backspace' && atStart && index > 0) {
-      event.preventDefault();
-      const offset = items[index - 1].length;
-      const nextItems = [...items];
-      nextItems.splice(index - 1, 2, items[index - 1] + items[index]);
-      updateItems(nextItems, { index: index - 1, offset });
-    } else if (event.key === 'Delete' && atEnd && index < items.length - 1) {
-      event.preventDefault();
-      const offset = items[index].length;
-      const nextItems = [...items];
-      nextItems.splice(index, 2, items[index] + items[index + 1]);
-      updateItems(nextItems, { index, offset });
-    }
-  }
+  }, [autoFocus, editor]);
 
   return (
-    <div
+    <EditorContent
       id={id}
-      className={`min-h-0 grow cursor-text overflow-y-auto p-2 leading-normal ${
+      editor={editor}
+      className={`min-h-0 grow overflow-y-auto p-2 leading-normal [&_.ProseMirror]:min-h-full ${
         today ? 'text-(--color-today-text)' : 'text-(--color-day-text)'
       }`}
-      onMouseDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        event.preventDefault();
-        const lastIndex = items.length - 1;
-        const textarea = itemRefs.current[lastIndex];
-        if (textarea) {
-          textarea.focus();
-          const offset = items[lastIndex].length;
-          textarea.setSelectionRange(offset, offset);
-        }
-      }}
-    >
-      {items.map((item, index) => (
-        <div className="group relative min-h-5" key={index}>
-          <textarea
-            ref={(element) => {
-              itemRefs.current[index] = element;
-            }}
-            aria-label={`Item ${index + 1}`}
-            autoFocus={autoFocus && index === 0}
-            rows={1}
-            spellCheck={false}
-            className="block w-full resize-none overflow-hidden border-0 bg-transparent py-0 pr-7 font-[inherit] leading-normal text-inherit focus:outline-none"
-            value={item}
-            onChange={(event) => handleItemChange(index, event)}
-            onKeyDown={(event) => handleKeyDown(index, event)}
-          />
-          {item !== '' && (
-            <button
-              type="button"
-              aria-label={`Move item ${index + 1} to next day`}
-              title="Move to next day"
-              className="absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-(--color-action-hover)"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onMoveLine(index)}
-            >
-              →
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
+    />
   );
 }
