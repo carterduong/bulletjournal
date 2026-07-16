@@ -101,7 +101,7 @@ export default function PlanArea() {
     });
   }
 
-  function renderDailyNote(name, dayIndex, today, date) {
+  function renderDailyNote(name, dayIndex, today, dateLabel) {
     const key = noteKeys[dayIndex];
     return (
       <section
@@ -111,7 +111,7 @@ export default function PlanArea() {
       >
         <h2 className={headingClasses(today)}>
           {name}
-          {date && <span className="text-[darkgrey]">{formatDate(date)}</span>}
+          {dateLabel && <span className="text-[darkgrey]">{dateLabel}</span>}
         </h2>
         <DailyNoteEditor
           id={key}
@@ -156,12 +156,13 @@ export default function PlanArea() {
     <div className="grid flex-1 grid-cols-6 grid-rows-[66%_1fr_auto] gap-2 p-4">
         {DAY_NAMES.map((name, i) => {
           const today = isToday(i);
-          return renderDailyNote(name, i, today, dates[i]);
+          return renderDailyNote(name, i, today, formatDate(dates[i]));
         })}
 
         {(() => {
           const today = isWeekend();
-          return renderDailyNote('Weekend', 5, today);
+          const weekendLabel = `${formatDate(dates[5])}-${formatDate(dates[6])}`;
+          return renderDailyNote('Weekend', 5, today, weekendLabel);
         })()}
 
         <label htmlFor={noteKeys[6]} className={`${noteClasses(false)} col-span-2`}>
