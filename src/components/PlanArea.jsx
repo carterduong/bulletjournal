@@ -137,7 +137,7 @@ export default function PlanArea() {
   }
 
   function noteClasses(today) {
-    return `flex flex-col ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
+    return `flex flex-col overflow-hidden rounded ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
   }
 
   function headingClasses(today) {
