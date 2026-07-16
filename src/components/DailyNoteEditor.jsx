@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import {
   EditorContent,
-  NodeViewContent,
-  NodeViewWrapper,
-  ReactNodeViewRenderer,
   useEditor,
 } from '@tiptap/react';
 import Document from '@tiptap/extension-document';
@@ -12,7 +9,30 @@ import Text from '@tiptap/extension-text';
 import { UndoRedo } from '@tiptap/extensions';
 import { documentToNote, noteToDocument } from '../utils/noteUtils';
 
-function ParagraphWithMoveAction({ editor, extension, getPos, node }) {
+function createParagraphNodeView({ editor, extension, getPos, node }) {
+  const dom = document.createElement('div');
+  const contentDOM = document.createElement('span');
+  const button = document.createElement('button');
+  let currentNode = node;
+
+  dom.className = 'group relative min-h-5 pr-7';
+  dom.dataset.nodeViewWrapper = '';
+  contentDOM.className = 'block min-h-5';
+  contentDOM.dataset.nodeViewContent = '';
+
+  button.type = 'button';
+  button.contentEditable = 'false';
+  button.ariaLabel = 'Move item to next day';
+  button.title = 'Move to next day';
+  button.className = 'absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--color-action-hover) focus:opacity-100 focus:outline-none';
+  button.textContent = '→';
+
+  function syncButton() {
+    const shouldShow = currentNode.textContent !== '';
+    if (shouldShow && !button.parentNode) dom.append(button);
+    if (!shouldShow && button.parentNode) button.remove();
+  }
+
   function handleMove() {
     const position = getPos();
     let lineIndex = 0;
@@ -24,29 +44,34 @@ function ParagraphWithMoveAction({ editor, extension, getPos, node }) {
     extension.options.onMoveLine(lineIndex);
   }
 
-  return (
-    <NodeViewWrapper className="group relative min-h-5 pr-7">
-      <NodeViewContent as="span" className="block min-h-5" />
-      {node.textContent !== '' && (
-        <button
-          type="button"
-          contentEditable={false}
-          aria-label="Move item to next day"
-          title="Move to next day"
-          className="absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--color-action-hover) focus:opacity-100 focus:outline-none"
-          onMouseDown={(event) => {
-            event.preventDefault();
-            handleMove();
-          }}
-          onClick={(event) => {
-            if (event.detail === 0) handleMove();
-          }}
-        >
-          →
-        </button>
-      )}
-    </NodeViewWrapper>
-  );
+  function handleMouseDown(event) {
+    event.preventDefault();
+    handleMove();
+  }
+
+  function handleClick(event) {
+    if (event.detail === 0) handleMove();
+  }
+
+  button.addEventListener('mousedown', handleMouseDown);
+  button.addEventListener('click', handleClick);
+  dom.append(contentDOM);
+  syncButton();
+
+  return {
+    dom,
+    contentDOM,
+    update(nextNode) {
+      if (nextNode.type !== currentNode.type) return false;
+      currentNode = nextNode;
+      syncButton();
+      return true;
+    },
+    destroy() {
+      button.removeEventListener('mousedown', handleMouseDown);
+      button.removeEventListener('click', handleClick);
+    },
+  };
 }
 
 const MoveableParagraph = Paragraph.extend({
@@ -58,7 +83,7 @@ const MoveableParagraph = Paragraph.extend({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ParagraphWithMoveAction);
+    return createParagraphNodeView;
   },
 });
 
