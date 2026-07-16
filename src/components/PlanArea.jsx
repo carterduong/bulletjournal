@@ -1,10 +1,19 @@
-import { useState, useCallback } from 'react';
-import { getCurrentWeekNumber, getDayOfYear, getDatesFromWeekNumber } from '../utils/dateUtils';
-import { getNextDailyKey, moveIncompleteLines, moveLine, moveLines } from '../utils/noteUtils';
-import DailyNoteEditor from './DailyNoteEditor';
-import WeekSelector from './WeekSelector';
+import { useState, useCallback } from "react";
+import {
+  getCurrentWeekNumber,
+  getDayOfYear,
+  getDatesFromWeekNumber,
+} from "../utils/dateUtils";
+import {
+  getNextDailyKey,
+  moveIncompleteLines,
+  moveLine,
+  moveLines,
+} from "../utils/noteUtils";
+import DailyNoteEditor from "./DailyNoteEditor";
+import WeekSelector from "./WeekSelector";
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 function formatDate(day, includeYear = false) {
   if (includeYear) {
@@ -28,7 +37,7 @@ function buildNoteKeys(dates, currentWeek, currentMonth) {
 function loadNotes(keys) {
   const notes = {};
   for (const key of keys) {
-    notes[key] = localStorage.getItem(key) || '';
+    notes[key] = localStorage.getItem(key) || "";
   }
   return notes;
 }
@@ -49,19 +58,21 @@ export default function PlanArea() {
   });
   const [contextMenu, setContextMenu] = useState(null);
 
-  const handleWeekClick = useCallback((week) => {
-    const newDates = getDatesFromWeekNumber(week);
-    const month = week === initialWeek
-      ? now.getMonth() + 1
-      : newDates[0].getMonth() + 1;
+  const handleWeekClick = useCallback(
+    (week) => {
+      const newDates = getDatesFromWeekNumber(week);
+      const month =
+        week === initialWeek ? now.getMonth() + 1 : newDates[0].getMonth() + 1;
 
-    setCurrentWeek(week);
-    setCurrentMonth(month);
-    setDates(newDates);
+      setCurrentWeek(week);
+      setCurrentMonth(month);
+      setDates(newDates);
 
-    const keys = buildNoteKeys(newDates, week, month);
-    setNotes(loadNotes(keys));
-  }, [initialWeek]);
+      const keys = buildNoteKeys(newDates, week, month);
+      setNotes(loadNotes(keys));
+    },
+    [initialWeek],
+  );
 
   function handleInput(key, value) {
     localStorage.setItem(key, value);
@@ -77,8 +88,9 @@ export default function PlanArea() {
   function moveItems(dayIndex, transform) {
     const sourceKey = noteKeys[dayIndex];
     const destinationKey = getDestinationKey(dayIndex);
-    const source = notes[sourceKey] ?? localStorage.getItem(sourceKey) ?? '';
-    const destination = notes[destinationKey] ?? localStorage.getItem(destinationKey) ?? '';
+    const source = notes[sourceKey] ?? localStorage.getItem(sourceKey) ?? "";
+    const destination =
+      notes[destinationKey] ?? localStorage.getItem(destinationKey) ?? "";
     const result = transform(source, destination);
 
     if (!result.moved) return;
@@ -115,18 +127,20 @@ export default function PlanArea() {
         </h2>
         <DailyNoteEditor
           id={key}
-          value={notes[key] ?? ''}
+          value={notes[key] ?? ""}
           today={today}
           autoFocus={today}
           onChange={(value) => handleInput(key, value)}
-          onMoveLine={(lineIndex) => moveItems(
-            dayIndex,
-            (source, destination) => moveLine(source, destination, lineIndex),
-          )}
-          onMoveLines={(lineIndices) => moveItems(
-            dayIndex,
-            (source, destination) => moveLines(source, destination, lineIndices),
-          )}
+          onMoveLine={(lineIndex) =>
+            moveItems(dayIndex, (source, destination) =>
+              moveLine(source, destination, lineIndex),
+            )
+          }
+          onMoveLines={(lineIndices) =>
+            moveItems(dayIndex, (source, destination) =>
+              moveLines(source, destination, lineIndices),
+            )
+          }
         />
       </section>
     );
@@ -137,72 +151,77 @@ export default function PlanArea() {
   }
 
   function isWeekend() {
-    return getDayOfYear(dates[5]) === todayDOY || getDayOfYear(dates[6]) === todayDOY;
+    return (
+      getDayOfYear(dates[5]) === todayDOY || getDayOfYear(dates[6]) === todayDOY
+    );
   }
 
   function noteClasses(today) {
-    return `flex flex-col overflow-hidden rounded-2 ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
+    return `flex flex-col overflow-hidden rounded-lg ${today ? "bg-(--color-today-bg) text-(--color-today-text)" : "bg-(--color-day-bg) text-(--color-day-text)"} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
   }
 
   function headingClasses(today) {
-    return `flex justify-between border-b p-2 text-xs font-normal uppercase tracking-wide ${today ? 'border-(--color-today-border)' : 'border-(--color-day-border)'}`;
+    return `flex justify-between border-b p-2 text-xs font-normal uppercase tracking-wide ${today ? "border-(--color-today-border)" : "border-(--color-day-border)"}`;
   }
 
   function textareaClasses(today) {
-    return `grow resize-none border-0 bg-transparent p-2 font-[inherit] leading-normal focus:outline-none ${today ? 'text-(--color-today-text)' : 'text-(--color-day-text)'}`;
+    return `grow resize-none border-0 bg-transparent p-2 font-[inherit] leading-normal focus:outline-none ${today ? "text-(--color-today-text)" : "text-(--color-day-text)"}`;
   }
 
   return (
     <div className="grid flex-1 grid-cols-6 grid-rows-[66%_1fr_auto] gap-2 p-4">
-        {DAY_NAMES.map((name, i) => {
-          const today = isToday(i);
-          return renderDailyNote(name, i, today, formatDate(dates[i]));
-        })}
+      {DAY_NAMES.map((name, i) => {
+        const today = isToday(i);
+        return renderDailyNote(name, i, today, formatDate(dates[i]));
+      })}
 
-        {(() => {
-          const today = isWeekend();
-          const weekendLabel = `${formatDate(dates[5])}-${formatDate(dates[6])}`;
-          return renderDailyNote('Weekend', 5, today, weekendLabel);
-        })()}
+      {(() => {
+        const today = isWeekend();
+        const weekendLabel = `${formatDate(dates[5])}-${formatDate(dates[6])}`;
+        return renderDailyNote("Weekend", 5, today, weekendLabel);
+      })()}
 
-        <label htmlFor={noteKeys[6]} className={`${noteClasses(false)} col-span-2`}>
-          <span className={headingClasses(false)}>
-            This Week
-          </span>
-          <textarea
-            id={noteKeys[6]}
-            spellCheck={false}
-            className={textareaClasses(false)}
-            value={notes[noteKeys[6]]}
-            onChange={(e) => handleInput(noteKeys[6], e.target.value)}
-          />
-        </label>
+      <label
+        htmlFor={noteKeys[6]}
+        className={`${noteClasses(false)} col-span-2`}
+      >
+        <span className={headingClasses(false)}>This Week</span>
+        <textarea
+          id={noteKeys[6]}
+          spellCheck={false}
+          className={textareaClasses(false)}
+          value={notes[noteKeys[6]]}
+          onChange={(e) => handleInput(noteKeys[6], e.target.value)}
+        />
+      </label>
 
-        <label htmlFor={noteKeys[7]} className={`${noteClasses(false)} col-span-2`}>
-          <span className={headingClasses(false)}>
-            This month
-          </span>
-          <textarea
-            id={noteKeys[7]}
-            spellCheck={false}
-            className={textareaClasses(false)}
-            value={notes[noteKeys[7]]}
-            onChange={(e) => handleInput(noteKeys[7], e.target.value)}
-          />
-        </label>
+      <label
+        htmlFor={noteKeys[7]}
+        className={`${noteClasses(false)} col-span-2`}
+      >
+        <span className={headingClasses(false)}>This month</span>
+        <textarea
+          id={noteKeys[7]}
+          spellCheck={false}
+          className={textareaClasses(false)}
+          value={notes[noteKeys[7]]}
+          onChange={(e) => handleInput(noteKeys[7], e.target.value)}
+        />
+      </label>
 
-        <label htmlFor={noteKeys[8]} className={`${noteClasses(false)} col-span-2`}>
-          <span className={headingClasses(false)}>
-            Next month
-          </span>
-          <textarea
-            id={noteKeys[8]}
-            spellCheck={false}
-            className={textareaClasses(false)}
-            value={notes[noteKeys[8]]}
-            onChange={(e) => handleInput(noteKeys[8], e.target.value)}
-          />
-        </label>
+      <label
+        htmlFor={noteKeys[8]}
+        className={`${noteClasses(false)} col-span-2`}
+      >
+        <span className={headingClasses(false)}>Next month</span>
+        <textarea
+          id={noteKeys[8]}
+          spellCheck={false}
+          className={textareaClasses(false)}
+          value={notes[noteKeys[8]]}
+          onChange={(e) => handleInput(noteKeys[8], e.target.value)}
+        />
+      </label>
       <WeekSelector onWeekClick={handleWeekClick} />
       {contextMenu && (
         <>
@@ -218,17 +237,17 @@ export default function PlanArea() {
           />
           <div
             role="menu"
-            className="fixed z-50 min-w-52 rounded-2 border border-(--color-menu-border) bg-(--color-menu-bg) p-1 shadow-lg"
+            className="fixed z-50 min-w-52 rounded-lg border border-(--color-menu-border) bg-(--color-menu-bg) p-1 shadow-lg"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') setContextMenu(null);
+              if (event.key === "Escape") setContextMenu(null);
             }}
           >
             <button
               type="button"
               role="menuitem"
               autoFocus
-              className="w-full cursor-pointer rounded-2 px-3 py-2 text-left leading-normal text-(--color-menu-text) hover:bg-(--color-menu-hover) focus:bg-(--color-menu-hover) focus:outline-none"
+              className="w-full cursor-pointer rounded-lg px-3 py-2 text-left leading-normal text-(--color-menu-text) hover:bg-(--color-menu-hover) focus:bg-(--color-menu-hover) focus:outline-none"
               onClick={() => {
                 moveItems(contextMenu.dayIndex, moveIncompleteLines);
                 setContextMenu(null);
