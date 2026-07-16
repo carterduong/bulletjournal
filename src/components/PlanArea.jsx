@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { getCurrentWeekNumber, getDayOfYear, getDatesFromWeekNumber } from '../utils/dateUtils';
+import { createMoveHistory } from '../utils/moveHistory';
 import { getNextDailyKey, moveIncompleteLines, moveLine, moveLines } from '../utils/noteUtils';
 import DailyNoteEditor from './DailyNoteEditor';
 import WeekSelector from './WeekSelector';
@@ -54,8 +55,7 @@ export default function PlanArea() {
     return loadNotes(keys);
   });
   const [contextMenu, setContextMenu] = useState(null);
-  const moveUndoStackRef = useRef([]);
-  const moveRedoStackRef = useRef([]);
+  const moveHistoryRef = useRef(createMoveHistory());
 
   const handleWeekClick = useCallback((week) => {
     const newDates = getDatesFromWeekNumber(week);
@@ -66,14 +66,14 @@ export default function PlanArea() {
     setCurrentWeek(week);
     setCurrentMonth(month);
     setDates(newDates);
-    moveUndoStackRef.current = [];
-    moveRedoStackRef.current = [];
+    moveHistoryRef.current.clear();
 
     const keys = buildNoteKeys(newDates, week, month);
     setNotes(loadNotes(keys));
   }, [initialWeek]);
 
   function handleInput(key, value) {
+    moveHistoryRef.current.recordEdit();
     localStorage.setItem(key, value);
     setNotes((prev) => ({ ...prev, [key]: value }));
   }
@@ -98,7 +98,7 @@ export default function PlanArea() {
 
     if (!result.moved) return;
 
-    moveUndoStackRef.current.push({
+    moveHistoryRef.current.recordMove({
       sourceKey,
       destinationKey,
       beforeSource: source,
@@ -106,7 +106,6 @@ export default function PlanArea() {
       afterSource: result.source,
       afterDestination: result.destination,
     });
-    moveRedoStackRef.current = [];
 
     writeNotes({
       [sourceKey]: result.source,
@@ -114,11 +113,10 @@ export default function PlanArea() {
     });
   }
 
-  function undoMove() {
-    const entry = moveUndoStackRef.current.pop();
+  function undoMove(canEditorUndo) {
+    const entry = moveHistoryRef.current.undo(canEditorUndo);
     if (!entry) return false;
 
-    moveRedoStackRef.current.push(entry);
     writeNotes({
       [entry.sourceKey]: entry.beforeSource,
       [entry.destinationKey]: entry.beforeDestination,
@@ -126,11 +124,10 @@ export default function PlanArea() {
     return true;
   }
 
-  function redoMove() {
-    const entry = moveRedoStackRef.current.pop();
+  function redoMove(canEditorRedo) {
+    const entry = moveHistoryRef.current.redo(canEditorRedo);
     if (!entry) return false;
 
-    moveUndoStackRef.current.push(entry);
     writeNotes({
       [entry.sourceKey]: entry.afterSource,
       [entry.destinationKey]: entry.afterDestination,

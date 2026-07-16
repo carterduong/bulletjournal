@@ -7,7 +7,7 @@ import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { UndoRedo } from '@tiptap/extensions';
-import { EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { documentToNote, noteToDocument } from '../utils/noteUtils';
 
 function setEditorContent(editor, value) {
@@ -19,15 +19,6 @@ function setEditorContent(editor, value) {
     })
     .setContent(noteToDocument(value), { emitUpdate: false })
     .run();
-
-  // Replacing the doc without history leaves stale undo steps that still
-  // report as undoable. Reset history so Cmd+Z can fall through to move undo.
-  const { state } = editor;
-  editor.view.updateState(EditorState.create({
-    doc: state.doc,
-    selection: state.selection,
-    plugins: state.plugins,
-  }));
 }
 
 const MoveAwareUndoRedo = UndoRedo.extend({
@@ -41,12 +32,29 @@ const MoveAwareUndoRedo = UndoRedo.extend({
 
   addKeyboardShortcuts() {
     return {
-      'Mod-z': () => this.editor.commands.undo() || this.options.onUndoMove(),
-      'Shift-Mod-z': () => this.editor.commands.redo() || this.options.onRedoMove(),
-      'Mod-y': () => this.editor.commands.redo() || this.options.onRedoMove(),
+      // Prefer the shared move stack when the latest action was a move, so
+      // Cmd+Z rewinds cross-day hops instead of applying stale per-editor history.
+      'Mod-z': () => {
+        if (this.options.onUndoMove(this.editor.can().undo())) return true;
+        return this.editor.commands.undo();
+      },
+      'Shift-Mod-z': () => {
+        if (this.options.onRedoMove(this.editor.can().redo())) return true;
+        return this.editor.commands.redo();
+      },
+      'Mod-y': () => {
+        if (this.options.onRedoMove(this.editor.can().redo())) return true;
+        return this.editor.commands.redo();
+      },
       // Russian keyboard layouts
-      'Mod-я': () => this.editor.commands.undo() || this.options.onUndoMove(),
-      'Shift-Mod-я': () => this.editor.commands.redo() || this.options.onRedoMove(),
+      'Mod-я': () => {
+        if (this.options.onUndoMove(this.editor.can().undo())) return true;
+        return this.editor.commands.undo();
+      },
+      'Shift-Mod-я': () => {
+        if (this.options.onRedoMove(this.editor.can().redo())) return true;
+        return this.editor.commands.redo();
+      },
     };
   },
 });
@@ -234,8 +242,8 @@ export default function DailyNoteEditor({
     Document,
     Text,
     MoveAwareUndoRedo.configure({
-      onUndoMove: () => onUndoMoveRef.current?.() ?? false,
-      onRedoMove: () => onRedoMoveRef.current?.() ?? false,
+      onUndoMove: (canEditorUndo) => onUndoMoveRef.current?.(canEditorUndo) ?? false,
+      onRedoMove: (canEditorRedo) => onRedoMoveRef.current?.(canEditorRedo) ?? false,
     }),
     MoveableParagraph.configure({
       onMoveLine: (lineIndex) => onMoveLineRef.current(lineIndex),
