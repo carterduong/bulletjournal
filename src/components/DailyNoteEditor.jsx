@@ -7,7 +7,7 @@ import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { UndoRedo } from '@tiptap/extensions';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import { documentToNote, noteToDocument } from '../utils/noteUtils';
 
 function setEditorContent(editor, value) {
@@ -19,6 +19,15 @@ function setEditorContent(editor, value) {
     })
     .setContent(noteToDocument(value), { emitUpdate: false })
     .run();
+
+  // Replacing the doc without history leaves stale undo steps that still
+  // report as undoable. Reset history so Cmd+Z can fall through to move undo.
+  const { state } = editor;
+  editor.view.updateState(EditorState.create({
+    doc: state.doc,
+    selection: state.selection,
+    plugins: state.plugins,
+  }));
 }
 
 const MoveAwareUndoRedo = UndoRedo.extend({
