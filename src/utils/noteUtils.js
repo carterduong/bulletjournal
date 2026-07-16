@@ -53,6 +53,27 @@ export function moveLine(source, destination, lineIndex) {
   };
 }
 
+export function moveLines(source, destination, lineIndices) {
+  const lines = splitNote(source);
+  const sortedIndices = [...lineIndices].sort((a, b) => a - b);
+  const validIndices = sortedIndices.filter(
+    (i) => i >= 0 && i < lines.length && lines[i] !== '',
+  );
+
+  if (validIndices.length === 0) {
+    return { source, destination, moved: false };
+  }
+
+  const linesToMove = validIndices.map((i) => lines[i]);
+  const remaining = lines.filter((_, i) => !validIndices.includes(i));
+
+  return {
+    source: remaining.join('\n'),
+    destination: appendLines(destination, linesToMove),
+    moved: true,
+  };
+}
+
 export function moveIncompleteLines(source, destination) {
   if (source === '') return { source, destination, moved: false };
 

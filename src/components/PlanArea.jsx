@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { getCurrentWeekNumber, getDayOfYear, getDatesFromWeekNumber } from '../utils/dateUtils';
-import { getNextDailyKey, moveIncompleteLines, moveLine } from '../utils/noteUtils';
+import { getNextDailyKey, moveIncompleteLines, moveLine, moveLines } from '../utils/noteUtils';
 import DailyNoteEditor from './DailyNoteEditor';
 import WeekSelector from './WeekSelector';
 
@@ -122,6 +122,10 @@ export default function PlanArea() {
           onMoveLine={(lineIndex) => moveItems(
             dayIndex,
             (source, destination) => moveLine(source, destination, lineIndex),
+          )}
+          onMoveLines={(lineIndices) => moveItems(
+            dayIndex,
+            (source, destination) => moveLines(source, destination, lineIndices),
           )}
         />
       </section>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   EditorContent,
   useEditor,
@@ -7,12 +7,33 @@ import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { UndoRedo } from '@tiptap/extensions';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { documentToNote, noteToDocument } from '../utils/noteUtils';
+
+const selectionStateKey = new PluginKey('selectionState');
+
+function getSelectedLineIndices(state) {
+  const { from, to } = state.selection;
+  if (from === to) return [];
+
+  const indices = [];
+  let index = 0;
+  state.doc.forEach((node, pos) => {
+    const nodeEnd = pos + node.nodeSize;
+    if (pos < to && nodeEnd > from) {
+      indices.push(index);
+    }
+    index++;
+  });
+
+  return indices.length > 1 ? indices : [];
+}
 
 function createParagraphNodeView({ editor, extension, getPos, node }) {
   const dom = document.createElement('div');
   const contentDOM = document.createElement('span');
-  const button = document.createElement('button');
+  const hoverButton = document.createElement('button');
+  const selectionButton = document.createElement('button');
   let currentNode = node;
 
   dom.className = 'group relative min-h-5 pr-7';
@@ -20,43 +41,86 @@ function createParagraphNodeView({ editor, extension, getPos, node }) {
   contentDOM.className = 'block min-h-5';
   contentDOM.dataset.nodeViewContent = '';
 
-  button.type = 'button';
-  button.contentEditable = 'false';
-  button.ariaLabel = 'Move item to next day';
-  button.title = 'Move to next day';
-  button.className = 'absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--color-action-hover) focus:opacity-100 focus:outline-none';
-  button.textContent = '→';
-
-  function syncButton() {
-    const shouldShow = currentNode.textContent !== '';
-    if (shouldShow && !button.parentNode) dom.append(button);
-    if (!shouldShow && button.parentNode) button.remove();
+  function setupButton(button, label) {
+    button.type = 'button';
+    button.contentEditable = 'false';
+    button.ariaLabel = label;
+    button.title = label;
+    button.className = 'absolute right-0 bottom-0 flex size-5 cursor-pointer items-center justify-center rounded-sm bg-(--color-action-bg) text-xs text-(--color-action-text) hover:bg-(--color-action-hover) focus:outline-none';
+    button.textContent = '→';
   }
 
-  function handleMove() {
+  setupButton(hoverButton, 'Move item to next day');
+  hoverButton.className += ' opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100';
+
+  setupButton(selectionButton, 'Move selected lines to next day');
+
+  function getLineIndex() {
     const position = getPos();
     let lineIndex = 0;
-
     editor.state.doc.forEach((_, offset, index) => {
       if (offset === position) lineIndex = index;
     });
+    return lineIndex;
+  }
 
-    extension.options.onMoveLine(lineIndex);
+  function handleMoveLine() {
+    extension.options.onMoveLine(getLineIndex());
+  }
+
+  function handleMoveSelection() {
+    const selectedIndices = getSelectedLineIndices(editor.state);
+    if (selectedIndices.length > 1) {
+      extension.options.onMoveLines(selectedIndices);
+    }
   }
 
   function handleMouseDown(event) {
     event.preventDefault();
-    handleMove();
+    handleMoveLine();
   }
 
   function handleClick(event) {
-    if (event.detail === 0) handleMove();
+    if (event.detail === 0) handleMoveLine();
   }
 
-  button.addEventListener('mousedown', handleMouseDown);
-  button.addEventListener('click', handleClick);
+  function handleSelectionMouseDown(event) {
+    event.preventDefault();
+    handleMoveSelection();
+  }
+
+  function handleSelectionClick(event) {
+    if (event.detail === 0) handleMoveSelection();
+  }
+
+  function syncButtons() {
+    const hasContent = currentNode.textContent !== '';
+    const selectedIndices = getSelectedLineIndices(editor.state);
+    const lineIndex = getLineIndex();
+    const isLastSelected = selectedIndices.length > 1 &&
+      selectedIndices[selectedIndices.length - 1] === lineIndex;
+    const isInSelection = selectedIndices.includes(lineIndex);
+
+    if (isLastSelected) {
+      if (hoverButton.parentNode) hoverButton.remove();
+      if (!selectionButton.parentNode) dom.append(selectionButton);
+    } else if (hasContent && !isInSelection) {
+      if (selectionButton.parentNode) selectionButton.remove();
+      if (!hoverButton.parentNode) dom.append(hoverButton);
+    } else {
+      if (hoverButton.parentNode) hoverButton.remove();
+      if (selectionButton.parentNode) selectionButton.remove();
+    }
+  }
+
+  hoverButton.addEventListener('mousedown', handleMouseDown);
+  hoverButton.addEventListener('click', handleClick);
+  selectionButton.addEventListener('mousedown', handleSelectionMouseDown);
+  selectionButton.addEventListener('click', handleSelectionClick);
   dom.append(contentDOM);
-  syncButton();
+  syncButtons();
+
+  const unsubscribe = extension.options.subscribeToSelection(syncButtons);
 
   return {
     dom,
@@ -64,12 +128,15 @@ function createParagraphNodeView({ editor, extension, getPos, node }) {
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false;
       currentNode = nextNode;
-      syncButton();
+      syncButtons();
       return true;
     },
     destroy() {
-      button.removeEventListener('mousedown', handleMouseDown);
-      button.removeEventListener('click', handleClick);
+      hoverButton.removeEventListener('mousedown', handleMouseDown);
+      hoverButton.removeEventListener('click', handleClick);
+      selectionButton.removeEventListener('mousedown', handleSelectionMouseDown);
+      selectionButton.removeEventListener('click', handleSelectionClick);
+      unsubscribe();
     },
   };
 }
@@ -79,6 +146,8 @@ const MoveableParagraph = Paragraph.extend({
     return {
       ...this.parent?.(),
       onMoveLine: () => {},
+      onMoveLines: () => {},
+      subscribeToSelection: () => () => {},
     };
   },
 
@@ -92,13 +161,27 @@ export default function DailyNoteEditor({
   value,
   onChange,
   onMoveLine,
+  onMoveLines,
   autoFocus = false,
   today = false,
 }) {
   const onChangeRef = useRef(onChange);
   const onMoveLineRef = useRef(onMoveLine);
+  const onMoveLinesRef = useRef(onMoveLines);
   onChangeRef.current = onChange;
   onMoveLineRef.current = onMoveLine;
+  onMoveLinesRef.current = onMoveLines;
+
+  const selectionListenersRef = useRef(new Set());
+
+  const subscribeToSelection = useCallback((listener) => {
+    selectionListenersRef.current.add(listener);
+    return () => selectionListenersRef.current.delete(listener);
+  }, []);
+
+  const notifySelectionChange = useCallback(() => {
+    selectionListenersRef.current.forEach((listener) => listener());
+  }, []);
 
   const extensions = useMemo(() => [
     Document,
@@ -106,8 +189,10 @@ export default function DailyNoteEditor({
     UndoRedo,
     MoveableParagraph.configure({
       onMoveLine: (lineIndex) => onMoveLineRef.current(lineIndex),
+      onMoveLines: (lineIndices) => onMoveLinesRef.current(lineIndices),
+      subscribeToSelection,
     }),
-  ], []);
+  ], [subscribeToSelection]);
 
   const editor = useEditor({
     extensions,
@@ -120,6 +205,9 @@ export default function DailyNoteEditor({
     },
     onUpdate: ({ editor: updatedEditor }) => {
       onChangeRef.current(documentToNote(updatedEditor.getJSON()));
+    },
+    onSelectionUpdate: () => {
+      notifySelectionChange();
     },
   }, []);
 
