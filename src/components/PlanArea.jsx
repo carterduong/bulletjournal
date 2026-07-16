@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { getCurrentWeekNumber, getDayOfYear, getDatesFromWeekNumber } from '../utils/dateUtils';
 import { getNextDailyKey, moveIncompleteLines, moveLine, moveLines } from '../utils/noteUtils';
 import DailyNoteEditor from './DailyNoteEditor';
@@ -33,6 +33,12 @@ function loadNotes(keys) {
   return notes;
 }
 
+function applyNoteValues(entries) {
+  for (const [key, value] of Object.entries(entries)) {
+    localStorage.setItem(key, value);
+  }
+}
+
 export default function PlanArea() {
   const now = new Date();
   const todayDOY = getDayOfYear(now);
@@ -48,6 +54,8 @@ export default function PlanArea() {
     return loadNotes(keys);
   });
   const [contextMenu, setContextMenu] = useState(null);
+  const moveUndoStackRef = useRef([]);
+  const moveRedoStackRef = useRef([]);
 
   const handleWeekClick = useCallback((week) => {
     const newDates = getDatesFromWeekNumber(week);
@@ -58,6 +66,8 @@ export default function PlanArea() {
     setCurrentWeek(week);
     setCurrentMonth(month);
     setDates(newDates);
+    moveUndoStackRef.current = [];
+    moveRedoStackRef.current = [];
 
     const keys = buildNoteKeys(newDates, week, month);
     setNotes(loadNotes(keys));
@@ -74,6 +84,11 @@ export default function PlanArea() {
     return getNextDailyKey(dayIndex, noteKeys, dates[0]);
   }
 
+  function writeNotes(entries) {
+    applyNoteValues(entries);
+    setNotes((prev) => ({ ...prev, ...entries }));
+  }
+
   function moveItems(dayIndex, transform) {
     const sourceKey = noteKeys[dayIndex];
     const destinationKey = getDestinationKey(dayIndex);
@@ -83,13 +98,44 @@ export default function PlanArea() {
 
     if (!result.moved) return;
 
-    localStorage.setItem(sourceKey, result.source);
-    localStorage.setItem(destinationKey, result.destination);
-    setNotes((prev) => ({
-      ...prev,
+    moveUndoStackRef.current.push({
+      sourceKey,
+      destinationKey,
+      beforeSource: source,
+      beforeDestination: destination,
+      afterSource: result.source,
+      afterDestination: result.destination,
+    });
+    moveRedoStackRef.current = [];
+
+    writeNotes({
       [sourceKey]: result.source,
       [destinationKey]: result.destination,
-    }));
+    });
+  }
+
+  function undoMove() {
+    const entry = moveUndoStackRef.current.pop();
+    if (!entry) return false;
+
+    moveRedoStackRef.current.push(entry);
+    writeNotes({
+      [entry.sourceKey]: entry.beforeSource,
+      [entry.destinationKey]: entry.beforeDestination,
+    });
+    return true;
+  }
+
+  function redoMove() {
+    const entry = moveRedoStackRef.current.pop();
+    if (!entry) return false;
+
+    moveUndoStackRef.current.push(entry);
+    writeNotes({
+      [entry.sourceKey]: entry.afterSource,
+      [entry.destinationKey]: entry.afterDestination,
+    });
+    return true;
   }
 
   function handleContextMenu(event, dayIndex) {
@@ -127,6 +173,8 @@ export default function PlanArea() {
             dayIndex,
             (source, destination) => moveLines(source, destination, lineIndices),
           )}
+          onUndoMove={undoMove}
+          onRedoMove={redoMove}
         />
       </section>
     );
