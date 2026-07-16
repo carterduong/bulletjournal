@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getCurrentWeekNumber, getDayOfYear, getDatesFromWeekNumber } from '../utils/dateUtils';
+import { getNextDailyKey, moveIncompleteLines, moveLine } from '../utils/noteUtils';
+import DailyNoteEditor from './DailyNoteEditor';
 import WeekSelector from './WeekSelector';
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -45,6 +47,7 @@ export default function PlanArea() {
     const keys = buildNoteKeys(d, initialWeek, initialMonth);
     return loadNotes(keys);
   });
+  const [contextMenu, setContextMenu] = useState(null);
 
   const handleWeekClick = useCallback((week) => {
     const newDates = getDatesFromWeekNumber(week);
@@ -67,6 +70,64 @@ export default function PlanArea() {
 
   const noteKeys = buildNoteKeys(dates, currentWeek, currentMonth);
 
+  function getDestinationKey(dayIndex) {
+    return getNextDailyKey(dayIndex, noteKeys, dates[0]);
+  }
+
+  function moveItems(dayIndex, transform) {
+    const sourceKey = noteKeys[dayIndex];
+    const destinationKey = getDestinationKey(dayIndex);
+    const source = notes[sourceKey] ?? localStorage.getItem(sourceKey) ?? '';
+    const destination = notes[destinationKey] ?? localStorage.getItem(destinationKey) ?? '';
+    const result = transform(source, destination);
+
+    if (!result.moved) return;
+
+    localStorage.setItem(sourceKey, result.source);
+    localStorage.setItem(destinationKey, result.destination);
+    setNotes((prev) => ({
+      ...prev,
+      [sourceKey]: result.source,
+      [destinationKey]: result.destination,
+    }));
+  }
+
+  function handleContextMenu(event, dayIndex) {
+    event.preventDefault();
+    setContextMenu({
+      dayIndex,
+      x: Math.max(8, Math.min(event.clientX, window.innerWidth - 216)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 52)),
+    });
+  }
+
+  function renderDailyNote(name, dayIndex, today, date) {
+    const key = noteKeys[dayIndex];
+    return (
+      <section
+        key={key}
+        className={noteClasses(today)}
+        onContextMenu={(event) => handleContextMenu(event, dayIndex)}
+      >
+        <h2 className={headingClasses(today)}>
+          {name}
+          {date && <span className="text-[darkgrey]">{formatDate(date)}</span>}
+        </h2>
+        <DailyNoteEditor
+          id={key}
+          value={notes[key] ?? ''}
+          today={today}
+          autoFocus={today}
+          onChange={(value) => handleInput(key, value)}
+          onMoveLine={(lineIndex) => moveItems(
+            dayIndex,
+            (source, destination) => moveLine(source, destination, lineIndex),
+          )}
+        />
+      </section>
+    );
+  }
+
   function isToday(dateIndex) {
     return getDayOfYear(dates[dateIndex]) === todayDOY;
   }
@@ -76,7 +137,7 @@ export default function PlanArea() {
   }
 
   function noteClasses(today) {
-    return `flex flex-col ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
+    return `flex flex-col overflow-hidden rounded ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
   }
 
   function headingClasses(today) {
@@ -91,48 +152,12 @@ export default function PlanArea() {
     <div className="grid flex-1 grid-cols-6 grid-rows-[66%_1fr_auto] gap-2 p-4">
         {DAY_NAMES.map((name, i) => {
           const today = isToday(i);
-          return (
-            <label
-              key={noteKeys[i]}
-              htmlFor={noteKeys[i]}
-              className={noteClasses(today)}
-            >
-              <span className={headingClasses(today)}>
-                {name}
-                <span className="text-[darkgrey]">{formatDate(dates[i])}</span>
-              </span>
-              <textarea
-                id={noteKeys[i]}
-                spellCheck={false}
-                autoFocus={today}
-                className={textareaClasses(today)}
-                value={notes[noteKeys[i]]}
-                onChange={(e) => handleInput(noteKeys[i], e.target.value)}
-              />
-            </label>
-          );
+          return renderDailyNote(name, i, today, dates[i]);
         })}
 
         {(() => {
           const today = isWeekend();
-          return (
-            <label
-              htmlFor={noteKeys[5]}
-              className={noteClasses(today)}
-            >
-              <span className={headingClasses(today)}>
-                Weekend
-              </span>
-              <textarea
-                id={noteKeys[5]}
-                spellCheck={false}
-                autoFocus={today}
-                className={textareaClasses(today)}
-                value={notes[noteKeys[5]]}
-                onChange={(e) => handleInput(noteKeys[5], e.target.value)}
-              />
-            </label>
-          );
+          return renderDailyNote('Weekend', 5, today);
         })()}
 
         <label htmlFor={noteKeys[6]} className={`${noteClasses(false)} col-span-2`}>
@@ -174,6 +199,41 @@ export default function PlanArea() {
           />
         </label>
       <WeekSelector onWeekClick={handleWeekClick} />
+      {contextMenu && (
+        <>
+          <button
+            type="button"
+            aria-label="Close move menu"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            role="menu"
+            className="fixed z-50 min-w-52 rounded border border-(--color-menu-border) bg-(--color-menu-bg) p-1 shadow-lg"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setContextMenu(null);
+            }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              autoFocus
+              className="w-full cursor-pointer rounded px-3 py-2 text-left leading-normal text-(--color-menu-text) hover:bg-(--color-menu-hover) focus:bg-(--color-menu-hover) focus:outline-none"
+              onClick={() => {
+                moveItems(contextMenu.dayIndex, moveIncompleteLines);
+                setContextMenu(null);
+              }}
+            >
+              Move incomplete to next day
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -6,6 +6,13 @@
   --color-day-border: #fff;
   --color-day-text: #000;
   --color-focus: rgba(34, 144, 255, 0.5);
+  --color-action-bg: rgba(0, 0, 0, 0.12);
+  --color-action-hover: rgba(0, 0, 0, 0.22);
+  --color-action-text: #222;
+  --color-menu-bg: #fff;
+  --color-menu-border: rgba(0, 0, 0, 0.2);
+  --color-menu-hover: rgba(0, 0, 0, 0.08);
+  --color-menu-text: #111;
   --color-today-bg: rgba(253, 226, 144, 1);
   --color-today-border: rgba(255, 255, 255, 0.5);
   --color-today-text: #000;
@@ -22,6 +29,13 @@
     --color-day-border: #222;
     --color-day-text: #ddd;
     --color-focus: rgba(34, 144, 255, 0.5);
+    --color-action-bg: rgba(255, 255, 255, 0.14);
+    --color-action-hover: rgba(255, 255, 255, 0.24);
+    --color-action-text: #eee;
+    --color-menu-bg: #333;
+    --color-menu-border: rgba(255, 255, 255, 0.2);
+    --color-menu-hover: rgba(255, 255, 255, 0.1);
+    --color-menu-text: #eee;
     --color-today-bg: rgba(253, 226, 144, 0.5);
     --color-today-border: rgba(255, 255, 255, 0.5);
     --color-today-text: #fff;
