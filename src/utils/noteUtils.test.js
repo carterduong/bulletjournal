@@ -5,6 +5,7 @@ import {
   getNextDailyKey,
   moveIncompleteLines,
   moveLine,
+  moveLines,
   noteToDocument,
   splitNote,
 } from './noteUtils';
@@ -70,6 +71,56 @@ describe('moveLine', () => {
   it('does not move an empty separator line', () => {
     expect(moveLine('first\n\nthird', '', 1)).toEqual({
       source: 'first\n\nthird',
+      destination: '',
+      moved: false,
+    });
+  });
+});
+
+describe('moveLines', () => {
+  it('moves multiple selected lines and preserves the others', () => {
+    expect(moveLines('first\nsecond\nthird\nfourth', 'destination', [1, 2])).toEqual({
+      source: 'first\nfourth',
+      destination: 'destination\nsecond\nthird',
+      moved: true,
+    });
+  });
+
+  it('handles non-contiguous line indices', () => {
+    expect(moveLines('first\nsecond\nthird\nfourth', '', [0, 2])).toEqual({
+      source: 'second\nfourth',
+      destination: 'first\nthird',
+      moved: true,
+    });
+  });
+
+  it('sorts indices to maintain order in destination', () => {
+    expect(moveLines('first\nsecond\nthird', '', [2, 0])).toEqual({
+      source: 'second',
+      destination: 'first\nthird',
+      moved: true,
+    });
+  });
+
+  it('skips empty lines in the selection', () => {
+    expect(moveLines('first\n\nthird', '', [0, 1, 2])).toEqual({
+      source: '',
+      destination: 'first\nthird',
+      moved: true,
+    });
+  });
+
+  it('does nothing when all selected lines are empty', () => {
+    expect(moveLines('first\n\nthird', '', [1])).toEqual({
+      source: 'first\n\nthird',
+      destination: '',
+      moved: false,
+    });
+  });
+
+  it('does nothing for empty selection', () => {
+    expect(moveLines('first\nsecond', '', [])).toEqual({
+      source: 'first\nsecond',
       destination: '',
       moved: false,
     });
