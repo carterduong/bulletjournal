@@ -141,7 +141,7 @@ export default function PlanArea() {
   }
 
   function noteClasses(today) {
-    return `flex flex-col overflow-hidden rounded ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
+    return `flex flex-col overflow-hidden rounded-2 ${today ? 'bg-(--color-today-bg) text-(--color-today-text)' : 'bg-(--color-day-bg) text-(--color-day-text)'} focus-within:shadow-[0_0_2px_2px_var(--color-focus)]`;
   }
 
   function headingClasses(today) {
@@ -218,7 +218,7 @@ export default function PlanArea() {
           />
           <div
             role="menu"
-            className="fixed z-50 min-w-52 rounded border border-(--color-menu-border) bg-(--color-menu-bg) p-1 shadow-lg"
+            className="fixed z-50 min-w-52 rounded-2 border border-(--color-menu-border) bg-(--color-menu-bg) p-1 shadow-lg"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onKeyDown={(event) => {
               if (event.key === 'Escape') setContextMenu(null);
@@ -228,7 +228,7 @@ export default function PlanArea() {
               type="button"
               role="menuitem"
               autoFocus
-              className="w-full cursor-pointer rounded px-3 py-2 text-left leading-normal text-(--color-menu-text) hover:bg-(--color-menu-hover) focus:bg-(--color-menu-hover) focus:outline-none"
+              className="w-full cursor-pointer rounded-2 px-3 py-2 text-left leading-normal text-(--color-menu-text) hover:bg-(--color-menu-hover) focus:bg-(--color-menu-hover) focus:outline-none"
               onClick={() => {
                 moveItems(contextMenu.dayIndex, moveIncompleteLines);
                 setContextMenu(null);
