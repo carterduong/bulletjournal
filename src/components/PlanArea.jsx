@@ -11,7 +11,7 @@ import {
   moveLine,
   moveLines,
 } from "../utils/noteUtils";
-import DailyNoteEditor from "./DailyNoteEditor";
+import { DailyNoteEditor } from "./DailyNoteEditor";
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -55,7 +55,7 @@ function getMonthForWeek(weekNumber, dates, now) {
     : dates[0].getMonth() + 1;
 }
 
-export default function PlanArea({ weekNumber }) {
+function PlanArea({ weekNumber }) {
   const now = new Date();
   const todayDOY = getDayOfYear(now);
   const dates = getDatesFromWeekNumber(weekNumber);
@@ -291,3 +291,5 @@ export default function PlanArea({ weekNumber }) {
     </div>
   );
 }
+
+export { PlanArea };

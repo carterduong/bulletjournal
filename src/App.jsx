@@ -1,6 +1,6 @@
 import { useState } from "react";
-import PlanArea from "./components/PlanArea";
-import WeekSelector from "./components/WeekSelector";
+import { PlanArea } from "./components/PlanArea";
+import { WeekSelector } from "./components/WeekSelector";
 import { getCurrentWeekNumber } from "./utils/dateUtils";
 
 export default function App() {
