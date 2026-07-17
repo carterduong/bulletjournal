@@ -120,6 +120,7 @@ function createParagraphNodeView({
 
   function setupButton(button: HTMLButtonElement, label: string) {
     button.type = "button";
+    button.tabIndex = -1;
     button.contentEditable = "false";
     button.ariaLabel = label;
     button.title = label;
@@ -325,7 +326,7 @@ const DailyNoteEditor = ({
 
   useEffect(() => {
     if (autoFocus && editor && !editor.isDestroyed) {
-      editor.commands.focus("start");
+      editor.commands.focus("end");
     }
   }, [autoFocus, editor]);
 
