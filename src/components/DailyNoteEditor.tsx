@@ -305,6 +305,11 @@ const DailyNoteEditor = ({
             "min-h-full cursor-text whitespace-pre-wrap break-words focus:outline-none",
           "aria-label": "Daily notes",
         },
+        // Each line is its own paragraph; ProseMirror's default text serializer
+        // joins blocks with "\n\n", which injects blank lines when pasting into
+        // plain textareas. Use a single "\n" to match the note's line model.
+        clipboardTextSerializer: (slice) =>
+          slice.content.textBetween(0, slice.content.size, "\n"),
       },
       onUpdate: ({ editor: updatedEditor }) => {
         onChangeRef.current(documentToNote(updatedEditor.getJSON()));
