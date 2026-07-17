@@ -1,6 +1,6 @@
 import { getCurrentWeekNumber, getNumberOfWeeks } from "../utils/dateUtils";
 
-export default function WeekSelector({ selectedWeek, onWeekClick }) {
+function WeekSelector({ selectedWeek, onWeekClick }) {
   const now = new Date();
   const currentWeek = getCurrentWeekNumber(now);
   const currentYear = now.getFullYear();
@@ -37,3 +37,5 @@ export default function WeekSelector({ selectedWeek, onWeekClick }) {
     </div>
   );
 }
+
+export { WeekSelector };

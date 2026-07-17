@@ -156,7 +156,7 @@ const MoveableParagraph = Paragraph.extend({
   },
 });
 
-export default function DailyNoteEditor({
+function DailyNoteEditor({
   id,
   value,
   onChange,
@@ -233,3 +233,5 @@ export default function DailyNoteEditor({
     />
   );
 }
+
+export { DailyNoteEditor };
