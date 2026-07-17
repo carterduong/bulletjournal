@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   getCurrentWeekNumber,
   getDayOfYear,
@@ -11,7 +11,6 @@ import {
   moveLines,
 } from "../utils/noteUtils";
 import DailyNoteEditor from "./DailyNoteEditor";
-import WeekSelector from "./WeekSelector";
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -42,44 +41,33 @@ function loadNotes(keys) {
   return notes;
 }
 
-export default function PlanArea() {
+function getMonthForWeek(weekNumber, dates, now) {
+  const todayWeek = getCurrentWeekNumber(now);
+  return weekNumber === todayWeek
+    ? now.getMonth() + 1
+    : dates[0].getMonth() + 1;
+}
+
+export default function PlanArea({ weekNumber }) {
   const now = new Date();
   const todayDOY = getDayOfYear(now);
-  const initialWeek = getCurrentWeekNumber(now);
-  const initialMonth = now.getMonth() + 1;
+  const dates = getDatesFromWeekNumber(weekNumber);
+  const currentMonth = getMonthForWeek(weekNumber, dates, now);
+  const noteKeys = buildNoteKeys(dates, weekNumber, currentMonth);
 
-  const [currentWeek, setCurrentWeek] = useState(initialWeek);
-  const [currentMonth, setCurrentMonth] = useState(initialMonth);
-  const [dates, setDates] = useState(() => getDatesFromWeekNumber(initialWeek));
-  const [notes, setNotes] = useState(() => {
-    const d = getDatesFromWeekNumber(initialWeek);
-    const keys = buildNoteKeys(d, initialWeek, initialMonth);
-    return loadNotes(keys);
-  });
+  const [notes, setNotes] = useState(() => loadNotes(noteKeys));
   const [contextMenu, setContextMenu] = useState(null);
 
-  const handleWeekClick = useCallback(
-    (week) => {
-      const newDates = getDatesFromWeekNumber(week);
-      const month =
-        week === initialWeek ? now.getMonth() + 1 : newDates[0].getMonth() + 1;
-
-      setCurrentWeek(week);
-      setCurrentMonth(month);
-      setDates(newDates);
-
-      const keys = buildNoteKeys(newDates, week, month);
-      setNotes(loadNotes(keys));
-    },
-    [initialWeek],
-  );
+  useEffect(() => {
+    const nextDates = getDatesFromWeekNumber(weekNumber);
+    const nextMonth = getMonthForWeek(weekNumber, nextDates, new Date());
+    setNotes(loadNotes(buildNoteKeys(nextDates, weekNumber, nextMonth)));
+  }, [weekNumber]);
 
   function handleInput(key, value) {
     localStorage.setItem(key, value);
     setNotes((prev) => ({ ...prev, [key]: value }));
   }
-
-  const noteKeys = buildNoteKeys(dates, currentWeek, currentMonth);
 
   function getDestinationKey(dayIndex) {
     return getNextDailyKey(dayIndex, noteKeys, dates[0]);
@@ -169,7 +157,7 @@ export default function PlanArea() {
   }
 
   return (
-    <div className="grid flex-1 grid-cols-6 grid-rows-[66%_1fr_auto] gap-2 p-4">
+    <div className="grid size-full grid-cols-6 grid-rows-[66%_1fr_auto] gap-2">
       {DAY_NAMES.map((name, i) => {
         const today = isToday(i);
         return renderDailyNote(name, i, today, formatDate(dates[i]));
@@ -222,7 +210,6 @@ export default function PlanArea() {
           onChange={(e) => handleInput(noteKeys[8], e.target.value)}
         />
       </label>
-      <WeekSelector onWeekClick={handleWeekClick} />
       {contextMenu && (
         <>
           <button
