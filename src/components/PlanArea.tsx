@@ -67,7 +67,7 @@ function applyNoteValues(entries: NotesMap) {
   }
 }
 
-const PlanArea = ({ weekNumber }: PlanAreaProps) => {
+const PlanArea = ({ weekNumber, active = true }: PlanAreaProps) => {
   const now = new Date();
   const todayDOY = getDayOfYear(now);
   const dates = getDatesFromWeekNumber(weekNumber);
