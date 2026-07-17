@@ -29,6 +29,7 @@ export default function WeekSelector({ selectedWeek, onWeekClick }) {
               onClick={handleWeekClick}
             >
               {String(i).padStart(2, "0")}
+              {i === currentWeek && <span>*</span>}
             </li>
           ))}
         </ol>
