@@ -13,8 +13,13 @@ import { PlanArea } from "./PlanArea";
 /** How many weeks on each side of the scroll-centered week stay mounted. */
 const MOUNT_RADIUS = 1;
 
-/** Quiet period after the last scroll event before we snap to a week. */
-const SCROLL_SETTLE_MS = 140;
+/** px/s — above this, settle prefers the week in the fling direction. */
+const FLING_VELOCITY = 900;
+
+/** Spring settle — snappy cover-flow style. */
+const SPRING_STIFFNESS = 320;
+const SPRING_DAMPING = 34;
+const SPRING_MAX_DT = 0.032;
 
 type WeekScrollerProps = {
   selectedWeek: number;
@@ -29,14 +34,26 @@ function clampWeek(week: number, numberOfWeeks: number): number {
   return Math.min(numberOfWeeks, Math.max(1, week));
 }
 
-function weekFromScrollTop(
+function weekFromScrollPosition(
   scrollTop: number,
   panelHeight: number,
   numberOfWeeks: number,
+  velocity = 0,
 ): number {
   if (panelHeight <= 0) return 1;
-  // Before halfway → keep current week; past halfway → next week.
-  const index = Math.round(scrollTop / panelHeight);
+  const progress = scrollTop / panelHeight;
+
+  let index: number;
+  if (velocity > FLING_VELOCITY) {
+    // Flinging down: commit forward once you've edged into the next week.
+    index = Math.ceil(progress - 0.08);
+  } else if (velocity < -FLING_VELOCITY) {
+    index = Math.floor(progress + 0.08);
+  } else {
+    // Resting / slow drag: halfway threshold.
+    index = Math.round(progress);
+  }
+
   return clampWeek(index + 1, numberOfWeeks);
 }
 
@@ -49,14 +66,58 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     const onWeekChangeRef = useRef(onWeekChange);
     const ignoreScrollSyncRef = useRef(false);
     const frameRef = useRef(0);
-    const settleTimerRef = useRef(0);
-    const scrollUnlockTimerRef = useRef(0);
+    const springFrameRef = useRef(0);
+    const velocityRef = useRef(0);
+    const lastScrollTopRef = useRef(0);
+    const lastScrollTimeRef = useRef(0);
     const [panelHeight, setPanelHeight] = useState(0);
     const [mountWeek, setMountWeek] = useState(selectedWeek);
 
     selectedWeekRef.current = selectedWeek;
     panelHeightRef.current = panelHeight;
     onWeekChangeRef.current = onWeekChange;
+
+    function cancelSpring() {
+      if (springFrameRef.current) {
+        cancelAnimationFrame(springFrameRef.current);
+        springFrameRef.current = 0;
+      }
+    }
+
+    function springTo(top: number) {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+
+      cancelSpring();
+      ignoreScrollSyncRef.current = true;
+
+      let position = scroller.scrollTop;
+      let velocity = velocityRef.current * 0.35;
+      let last = performance.now();
+
+      const step = (now: number) => {
+        const dt = Math.min((now - last) / 1000, SPRING_MAX_DT);
+        last = now;
+
+        const springForce = -SPRING_STIFFNESS * (position - top);
+        const damperForce = -SPRING_DAMPING * velocity;
+        velocity += (springForce + damperForce) * dt;
+        position += velocity * dt;
+        scroller.scrollTop = position;
+
+        if (Math.abs(position - top) < 0.6 && Math.abs(velocity) < 12) {
+          scroller.scrollTop = top;
+          velocityRef.current = 0;
+          springFrameRef.current = 0;
+          ignoreScrollSyncRef.current = false;
+          return;
+        }
+
+        springFrameRef.current = requestAnimationFrame(step);
+      };
+
+      springFrameRef.current = requestAnimationFrame(step);
+    }
 
     function scrollToWeek(
       week: number,
@@ -68,31 +129,21 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
 
       const next = clampWeek(week, numberOfWeeks);
       const top = (next - 1) * height;
-      ignoreScrollSyncRef.current = true;
       setMountWeek(next);
-      scroller.scrollTo({ top, behavior });
-
-      if (scrollUnlockTimerRef.current) {
-        window.clearTimeout(scrollUnlockTimerRef.current);
-        scrollUnlockTimerRef.current = 0;
-      }
-
-      const unlock = () => {
-        ignoreScrollSyncRef.current = false;
-        scroller.removeEventListener("scrollend", unlock);
-        if (scrollUnlockTimerRef.current) {
-          window.clearTimeout(scrollUnlockTimerRef.current);
-          scrollUnlockTimerRef.current = 0;
-        }
-      };
 
       if (behavior === "instant") {
-        requestAnimationFrame(unlock);
+        cancelSpring();
+        ignoreScrollSyncRef.current = true;
+        scroller.scrollTop = top;
+        velocityRef.current = 0;
+        lastScrollTopRef.current = top;
+        requestAnimationFrame(() => {
+          ignoreScrollSyncRef.current = false;
+        });
         return;
       }
 
-      scroller.addEventListener("scrollend", unlock, { once: true });
-      scrollUnlockTimerRef.current = window.setTimeout(unlock, 500);
+      springTo(top);
     }
 
     function settleToNearestWeek() {
@@ -100,10 +151,11 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       const height = panelHeightRef.current || scroller?.clientHeight || 0;
       if (!scroller || height <= 0 || ignoreScrollSyncRef.current) return;
 
-      const week = weekFromScrollTop(
+      const week = weekFromScrollPosition(
         scroller.scrollTop,
         height,
         numberOfWeeks,
+        velocityRef.current,
       );
       setMountWeek(week);
       if (week !== selectedWeekRef.current) {
@@ -112,7 +164,10 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
 
       const top = (week - 1) * height;
       if (Math.abs(scroller.scrollTop - top) > 1) {
-        scrollToWeek(week, "smooth");
+        springTo(top);
+      } else {
+        scroller.scrollTop = top;
+        velocityRef.current = 0;
       }
     }
 
@@ -155,52 +210,66 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       const scroller = scrollerRef.current;
       if (!scroller) return;
 
+      // Interrupt an in-flight spring when the user grabs the scroller again.
+      const onPointerDown = () => {
+        if (!springFrameRef.current) return;
+        cancelSpring();
+        ignoreScrollSyncRef.current = false;
+        velocityRef.current = 0;
+        lastScrollTopRef.current = scroller.scrollTop;
+        lastScrollTimeRef.current = performance.now();
+      };
+
       const onScrollEnd = () => {
-        if (settleTimerRef.current) {
-          window.clearTimeout(settleTimerRef.current);
-          settleTimerRef.current = 0;
-        }
         settleRef.current();
       };
 
+      scroller.addEventListener("pointerdown", onPointerDown);
       scroller.addEventListener("scrollend", onScrollEnd);
-      return () => scroller.removeEventListener("scrollend", onScrollEnd);
+      return () => {
+        scroller.removeEventListener("pointerdown", onPointerDown);
+        scroller.removeEventListener("scrollend", onScrollEnd);
+      };
     }, []);
 
     useEffect(() => {
       return () => {
         if (frameRef.current) cancelAnimationFrame(frameRef.current);
-        if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
-        if (scrollUnlockTimerRef.current) {
-          window.clearTimeout(scrollUnlockTimerRef.current);
-        }
+        cancelSpring();
       };
     }, []);
 
     function handleScroll(event: UIEvent<HTMLDivElement>) {
       if (ignoreScrollSyncRef.current) return;
       const scroller = event.currentTarget;
+      const now = performance.now();
+      const lastTime = lastScrollTimeRef.current;
+      const lastTop = lastScrollTopRef.current;
+
+      if (lastTime > 0) {
+        const dt = (now - lastTime) / 1000;
+        if (dt > 0 && dt < 0.1) {
+          velocityRef.current = (scroller.scrollTop - lastTop) / dt;
+        }
+      }
+      lastScrollTopRef.current = scroller.scrollTop;
+      lastScrollTimeRef.current = now;
 
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       frameRef.current = requestAnimationFrame(() => {
         const height = panelHeightRef.current || scroller.clientHeight;
-        const week = weekFromScrollTop(
+        // Preview the nearest week while dragging; spring commit happens on scrollend.
+        const week = weekFromScrollPosition(
           scroller.scrollTop,
           height,
           numberOfWeeks,
+          0,
         );
         setMountWeek((prev) => (prev === week ? prev : week));
         if (week !== selectedWeekRef.current) {
           onWeekChangeRef.current(week);
         }
       });
-
-      // Fallback when scrollend is missing or delayed (some wheel devices).
-      if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
-      settleTimerRef.current = window.setTimeout(() => {
-        settleTimerRef.current = 0;
-        settleRef.current();
-      }, SCROLL_SETTLE_MS);
     }
 
     const weeks = Array.from({ length: numberOfWeeks }, (_, i) => i + 1);
