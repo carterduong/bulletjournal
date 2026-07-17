@@ -1,6 +1,12 @@
+import type { MouseEvent } from "react";
 import { getCurrentWeekNumber, getNumberOfWeeks } from "../utils/dateUtils";
 
-function WeekSelector({ selectedWeek, onWeekClick }) {
+type WeekSelectorProps = {
+  selectedWeek: number;
+  onWeekClick: (week: number) => void;
+};
+
+const WeekSelector = ({ selectedWeek, onWeekClick }: WeekSelectorProps) => {
   const now = new Date();
   const currentWeek = getCurrentWeekNumber(now);
   const currentYear = now.getFullYear();
@@ -9,7 +15,7 @@ function WeekSelector({ selectedWeek, onWeekClick }) {
 
   const weeksArray = Array.from({ length: numberOfWeeks }, (_, i) => i + 1);
 
-  function handleWeekClick(e) {
+  function handleWeekClick(e: MouseEvent<HTMLLIElement>) {
     onWeekClick(Number(e.currentTarget.id));
   }
 
@@ -36,6 +42,6 @@ function WeekSelector({ selectedWeek, onWeekClick }) {
       </span>
     </div>
   );
-}
+};
 
 export { WeekSelector };
