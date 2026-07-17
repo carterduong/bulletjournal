@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  useState,
   type UIEvent,
 } from "react";
 import { getNumberOfWeeks } from "../utils/dateUtils";
@@ -27,11 +28,11 @@ function clampWeek(week: number, numberOfWeeks: number): number {
 
 function weekFromScrollTop(
   scrollTop: number,
-  clientHeight: number,
+  panelHeight: number,
   numberOfWeeks: number,
 ): number {
-  if (clientHeight <= 0) return 1;
-  const index = Math.round(scrollTop / clientHeight);
+  if (panelHeight <= 0) return 1;
+  const index = Math.round(scrollTop / panelHeight);
   return clampWeek(index + 1, numberOfWeeks);
 }
 
@@ -40,20 +41,24 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     const numberOfWeeks = getNumberOfWeeks(new Date());
     const scrollerRef = useRef<HTMLDivElement>(null);
     const selectedWeekRef = useRef(selectedWeek);
+    const panelHeightRef = useRef(0);
     const ignoreScrollSyncRef = useRef(false);
     const frameRef = useRef(0);
     const unlockTimerRef = useRef(0);
+    const [panelHeight, setPanelHeight] = useState(0);
 
     selectedWeekRef.current = selectedWeek;
+    panelHeightRef.current = panelHeight;
 
     function scrollToWeek(
       week: number,
       behavior: ScrollBehavior = "smooth",
     ) {
       const scroller = scrollerRef.current;
-      if (!scroller) return;
+      const height = panelHeightRef.current || scroller?.clientHeight || 0;
+      if (!scroller || height <= 0) return;
 
-      const top = (clampWeek(week, numberOfWeeks) - 1) * scroller.clientHeight;
+      const top = (clampWeek(week, numberOfWeeks) - 1) * height;
       ignoreScrollSyncRef.current = true;
       scroller.scrollTo({ top, behavior });
 
@@ -83,26 +88,28 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     useImperativeHandle(ref, () => ({ scrollToWeek }), [numberOfWeeks]);
 
     useLayoutEffect(() => {
-      scrollToWeek(selectedWeekRef.current, "instant");
-    }, []);
-
-    useEffect(() => {
       const scroller = scrollerRef.current;
       if (!scroller) return;
 
-      function syncHeight() {
-        const el = scrollerRef.current;
-        if (!el) return;
-        const nextTop = (selectedWeekRef.current - 1) * el.clientHeight;
-        if (Math.abs(el.scrollTop - nextTop) > 1) {
-          scrollToWeek(selectedWeekRef.current, "instant");
-        }
-      }
+      const updateHeight = () => {
+        const nextHeight = scroller.clientHeight;
+        setPanelHeight((prev) => {
+          if (prev === nextHeight) return prev;
+          return nextHeight;
+        });
+      };
 
-      const observer = new ResizeObserver(syncHeight);
+      updateHeight();
+      const observer = new ResizeObserver(updateHeight);
       observer.observe(scroller);
       return () => observer.disconnect();
-    }, [numberOfWeeks]);
+    }, []);
+
+    // Keep the active week framed when the viewport height changes.
+    useLayoutEffect(() => {
+      if (panelHeight <= 0) return;
+      scrollToWeek(selectedWeekRef.current, "instant");
+    }, [panelHeight]);
 
     useEffect(() => {
       return () => {
@@ -116,9 +123,10 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       const scroller = event.currentTarget;
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       frameRef.current = requestAnimationFrame(() => {
+        const height = panelHeightRef.current || scroller.clientHeight;
         const week = weekFromScrollTop(
           scroller.scrollTop,
-          scroller.clientHeight,
+          height,
           numberOfWeeks,
         );
         if (week !== selectedWeekRef.current) {
@@ -132,25 +140,27 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     return (
       <div
         ref={scrollerRef}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
         onScroll={handleScroll}
       >
-        {weeks.map((week) => {
-          const isMounted = Math.abs(week - selectedWeek) <= MOUNT_RADIUS;
-          return (
-            <div
-              key={week}
-              data-week={week}
-              className="box-border w-full shrink-0 grow-0 basis-full snap-start snap-always"
-            >
-              {isMounted ? (
-                <PlanArea weekNumber={week} />
-              ) : (
-                <div className="size-full" aria-hidden />
-              )}
-            </div>
-          );
-        })}
+        {panelHeight > 0 &&
+          weeks.map((week) => {
+            const isMounted = Math.abs(week - selectedWeek) <= MOUNT_RADIUS;
+            return (
+              <div
+                key={week}
+                data-week={week}
+                className="box-border w-full min-h-0 shrink-0 snap-start snap-always overflow-hidden"
+                style={{ height: panelHeight }}
+              >
+                {isMounted ? (
+                  <PlanArea weekNumber={week} />
+                ) : (
+                  <div className="size-full" aria-hidden />
+                )}
+              </div>
+            );
+          })}
       </div>
     );
   },
