@@ -1,4 +1,10 @@
-import { useEffect, useState, useRef, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   getCurrentWeekNumber,
   getDayOfYear,
@@ -15,6 +21,20 @@ import {
 import { DailyNoteEditor } from "./DailyNoteEditor";
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 type PlanAreaProps = {
   weekNumber: number;
@@ -80,9 +100,7 @@ const PlanArea = ({ weekNumber }: PlanAreaProps) => {
   const noteKeys = buildNoteKeys(dates, weekNumber, currentMonth);
 
   const [notes, setNotes] = useState<NotesMap>(() => loadNotes(noteKeys));
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(
-    null,
-  );
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const moveHistoryRef = useRef(createMoveHistory());
 
   useEffect(() => {
@@ -265,7 +283,12 @@ const PlanArea = ({ weekNumber }: PlanAreaProps) => {
         htmlFor={thisMonthKey}
         className={`${noteClasses(false)} col-span-2`}
       >
-        <span className={headingClasses(false)}>This month</span>
+        <div className={headingClasses(false) + " flex justify-between"}>
+          <span>This month</span>
+          <span className="text-[darkgrey]">
+            {MONTH_NAMES[currentMonth - 1]}
+          </span>
+        </div>
         <textarea
           id={thisMonthKey}
           spellCheck={false}
@@ -279,7 +302,10 @@ const PlanArea = ({ weekNumber }: PlanAreaProps) => {
         htmlFor={nextMonthKey}
         className={`${noteClasses(false)} col-span-2`}
       >
-        <span className={headingClasses(false)}>Next month</span>
+        <div className={headingClasses(false) + " flex justify-between"}>
+          <span>Next month</span>
+          <span className="text-[darkgrey]">{MONTH_NAMES[currentMonth]}</span>
+        </div>
         <textarea
           id={nextMonthKey}
           spellCheck={false}
