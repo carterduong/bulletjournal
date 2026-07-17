@@ -36,19 +36,53 @@ function weekFromScrollTop(
   return clampWeek(index + 1, numberOfWeeks);
 }
 
+function canScrollInDirection(element: HTMLElement, deltaY: number): boolean {
+  if (deltaY === 0) return false;
+  const style = window.getComputedStyle(element);
+  const overflowY = style.overflowY;
+  const scrollable =
+    (overflowY === "auto" || overflowY === "scroll") &&
+    element.scrollHeight > element.clientHeight + 1;
+  if (!scrollable) return false;
+
+  if (deltaY > 0) {
+    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+  }
+  return element.scrollTop > 1;
+}
+
+function nestedScrollableAllowsWheel(
+  target: EventTarget | null,
+  scroller: HTMLElement,
+  deltaY: number,
+): boolean {
+  if (!(target instanceof Element)) return false;
+  let node: Element | null = target;
+  while (node && node !== scroller) {
+    if (node instanceof HTMLElement && canScrollInDirection(node, deltaY)) {
+      return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
+}
+
 const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
   function WeekScroller({ selectedWeek, onWeekChange }, ref) {
     const numberOfWeeks = getNumberOfWeeks(new Date());
     const scrollerRef = useRef<HTMLDivElement>(null);
     const selectedWeekRef = useRef(selectedWeek);
     const panelHeightRef = useRef(0);
+    const onWeekChangeRef = useRef(onWeekChange);
     const ignoreScrollSyncRef = useRef(false);
+    const wheelLockRef = useRef(false);
     const frameRef = useRef(0);
     const unlockTimerRef = useRef(0);
     const [panelHeight, setPanelHeight] = useState(0);
 
     selectedWeekRef.current = selectedWeek;
     panelHeightRef.current = panelHeight;
+    onWeekChangeRef.current = onWeekChange;
 
     function scrollToWeek(
       week: number,
@@ -69,6 +103,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
 
       const unlock = () => {
         ignoreScrollSyncRef.current = false;
+        wheelLockRef.current = false;
         scroller.removeEventListener("scrollend", unlock);
         if (unlockTimerRef.current) {
           window.clearTimeout(unlockTimerRef.current);
@@ -82,7 +117,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       }
 
       scroller.addEventListener("scrollend", unlock, { once: true });
-      unlockTimerRef.current = window.setTimeout(unlock, 500);
+      unlockTimerRef.current = window.setTimeout(unlock, 450);
     }
 
     useImperativeHandle(ref, () => ({ scrollToWeek }), [numberOfWeeks]);
@@ -93,10 +128,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
 
       const updateHeight = () => {
         const nextHeight = scroller.clientHeight;
-        setPanelHeight((prev) => {
-          if (prev === nextHeight) return prev;
-          return nextHeight;
-        });
+        setPanelHeight((prev) => (prev === nextHeight ? prev : nextHeight));
       };
 
       updateHeight();
@@ -105,11 +137,43 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       return () => observer.disconnect();
     }, []);
 
-    // Keep the active week framed when the viewport height changes.
     useLayoutEffect(() => {
       if (panelHeight <= 0) return;
       scrollToWeek(selectedWeekRef.current, "instant");
     }, [panelHeight]);
+
+    // Non-passive wheel listener so we can preventDefault and step one week
+    // per gesture (CSS snap alone lets large wheel deltas skip weeks).
+    useEffect(() => {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+
+      const onWheel = (event: WheelEvent) => {
+        if (panelHeightRef.current <= 0) return;
+        if (
+          nestedScrollableAllowsWheel(event.target, scroller, event.deltaY)
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        if (wheelLockRef.current || event.deltaY === 0) return;
+
+        const direction = event.deltaY > 0 ? 1 : -1;
+        const next = clampWeek(
+          selectedWeekRef.current + direction,
+          numberOfWeeks,
+        );
+        if (next === selectedWeekRef.current) return;
+
+        wheelLockRef.current = true;
+        onWeekChangeRef.current(next);
+        scrollToWeek(next, "smooth");
+      };
+
+      scroller.addEventListener("wheel", onWheel, { passive: false });
+      return () => scroller.removeEventListener("wheel", onWheel);
+    }, [numberOfWeeks]);
 
     useEffect(() => {
       return () => {
