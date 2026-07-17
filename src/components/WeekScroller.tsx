@@ -13,6 +13,9 @@ import { PlanArea } from "./PlanArea";
 /** How many weeks on each side of the active week keep a live PlanArea mounted. */
 const MOUNT_RADIUS = 1;
 
+/** Quiet period after the last wheel event before another week step is allowed. */
+const WHEEL_GESTURE_MS = 280;
+
 type WeekScrollerProps = {
   selectedWeek: number;
   onWeekChange: (week: number) => void;
@@ -76,9 +79,10 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     const panelHeightRef = useRef(0);
     const onWeekChangeRef = useRef(onWeekChange);
     const ignoreScrollSyncRef = useRef(false);
-    const wheelLockRef = useRef(false);
+    const wheelGestureActiveRef = useRef(false);
+    const wheelGestureTimerRef = useRef(0);
     const frameRef = useRef(0);
-    const unlockTimerRef = useRef(0);
+    const scrollUnlockTimerRef = useRef(0);
     const [panelHeight, setPanelHeight] = useState(0);
 
     selectedWeekRef.current = selectedWeek;
@@ -97,18 +101,17 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       ignoreScrollSyncRef.current = true;
       scroller.scrollTo({ top, behavior });
 
-      if (unlockTimerRef.current) {
-        window.clearTimeout(unlockTimerRef.current);
-        unlockTimerRef.current = 0;
+      if (scrollUnlockTimerRef.current) {
+        window.clearTimeout(scrollUnlockTimerRef.current);
+        scrollUnlockTimerRef.current = 0;
       }
 
       const unlock = () => {
         ignoreScrollSyncRef.current = false;
-        wheelLockRef.current = false;
         scroller.removeEventListener("scrollend", unlock);
-        if (unlockTimerRef.current) {
-          window.clearTimeout(unlockTimerRef.current);
-          unlockTimerRef.current = 0;
+        if (scrollUnlockTimerRef.current) {
+          window.clearTimeout(scrollUnlockTimerRef.current);
+          scrollUnlockTimerRef.current = 0;
         }
       };
 
@@ -118,7 +121,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       }
 
       scroller.addEventListener("scrollend", unlock, { once: true });
-      unlockTimerRef.current = window.setTimeout(unlock, 450);
+      scrollUnlockTimerRef.current = window.setTimeout(unlock, 500);
     }
 
     useImperativeHandle(ref, () => ({ scrollToWeek }), [numberOfWeeks]);
@@ -143,8 +146,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       scrollToWeek(selectedWeekRef.current, "instant");
     }, [panelHeight]);
 
-    // Non-passive wheel listener so we can preventDefault and step one week
-    // per gesture (CSS snap alone lets large wheel deltas skip weeks).
+    // Non-passive wheel listener: one week step per wheel/trackpad gesture.
     useEffect(() => {
       const scroller = scrollerRef.current;
       if (!scroller) return;
@@ -158,28 +160,45 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
         }
 
         event.preventDefault();
-        if (wheelLockRef.current || event.deltaY === 0) return;
+        if (event.deltaY === 0) return;
 
-        const direction = event.deltaY > 0 ? 1 : -1;
-        const next = clampWeek(
-          selectedWeekRef.current + direction,
-          numberOfWeeks,
-        );
-        if (next === selectedWeekRef.current) return;
+        if (!wheelGestureActiveRef.current) {
+          wheelGestureActiveRef.current = true;
+          const direction = event.deltaY > 0 ? 1 : -1;
+          const next = clampWeek(
+            selectedWeekRef.current + direction,
+            numberOfWeeks,
+          );
+          if (next !== selectedWeekRef.current) {
+            onWeekChangeRef.current(next);
+            scrollToWeek(next, "smooth");
+          }
+        }
 
-        wheelLockRef.current = true;
-        onWeekChangeRef.current(next);
-        scrollToWeek(next, "smooth");
+        if (wheelGestureTimerRef.current) {
+          window.clearTimeout(wheelGestureTimerRef.current);
+        }
+        wheelGestureTimerRef.current = window.setTimeout(() => {
+          wheelGestureActiveRef.current = false;
+          wheelGestureTimerRef.current = 0;
+        }, WHEEL_GESTURE_MS);
       };
 
       scroller.addEventListener("wheel", onWheel, { passive: false });
-      return () => scroller.removeEventListener("wheel", onWheel);
+      return () => {
+        scroller.removeEventListener("wheel", onWheel);
+        if (wheelGestureTimerRef.current) {
+          window.clearTimeout(wheelGestureTimerRef.current);
+        }
+      };
     }, [numberOfWeeks]);
 
     useEffect(() => {
       return () => {
         if (frameRef.current) cancelAnimationFrame(frameRef.current);
-        if (unlockTimerRef.current) window.clearTimeout(unlockTimerRef.current);
+        if (scrollUnlockTimerRef.current) {
+          window.clearTimeout(scrollUnlockTimerRef.current);
+        }
       };
     }, []);
 
