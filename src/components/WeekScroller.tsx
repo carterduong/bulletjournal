@@ -13,8 +13,8 @@ import { PlanArea } from "./PlanArea";
 /** How many weeks on each side of the active week keep a live PlanArea mounted. */
 const MOUNT_RADIUS = 1;
 
-/** Quiet period after the last wheel event before another week step is allowed. */
-const WHEEL_GESTURE_MS = 280;
+/** Minimum time a wheel gesture stays locked after stepping a week. */
+const WHEEL_LOCK_MS = 500;
 
 type WeekScrollerProps = {
   selectedWeek: number;
@@ -79,8 +79,8 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     const panelHeightRef = useRef(0);
     const onWeekChangeRef = useRef(onWeekChange);
     const ignoreScrollSyncRef = useRef(false);
-    const wheelGestureActiveRef = useRef(false);
-    const wheelGestureTimerRef = useRef(0);
+    const wheelLockedRef = useRef(false);
+    const wheelLockTimerRef = useRef(0);
     const frameRef = useRef(0);
     const scrollUnlockTimerRef = useRef(0);
     const [panelHeight, setPanelHeight] = useState(0);
@@ -106,9 +106,9 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
         scrollUnlockTimerRef.current = 0;
       }
 
-      const unlock = () => {
+      const unlockScrollSync = () => {
         ignoreScrollSyncRef.current = false;
-        scroller.removeEventListener("scrollend", unlock);
+        scroller.removeEventListener("scrollend", unlockScrollSync);
         if (scrollUnlockTimerRef.current) {
           window.clearTimeout(scrollUnlockTimerRef.current);
           scrollUnlockTimerRef.current = 0;
@@ -116,12 +116,12 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       };
 
       if (behavior === "instant") {
-        requestAnimationFrame(unlock);
+        requestAnimationFrame(unlockScrollSync);
         return;
       }
 
-      scroller.addEventListener("scrollend", unlock, { once: true });
-      scrollUnlockTimerRef.current = window.setTimeout(unlock, 500);
+      scroller.addEventListener("scrollend", unlockScrollSync, { once: true });
+      scrollUnlockTimerRef.current = window.setTimeout(unlockScrollSync, 500);
     }
 
     useImperativeHandle(ref, () => ({ scrollToWeek }), [numberOfWeeks]);
@@ -146,10 +146,17 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       scrollToWeek(selectedWeekRef.current, "instant");
     }, [panelHeight]);
 
-    // Non-passive wheel listener: one week step per wheel/trackpad gesture.
     useEffect(() => {
       const scroller = scrollerRef.current;
       if (!scroller) return;
+
+      const releaseWheelLock = () => {
+        wheelLockedRef.current = false;
+        if (wheelLockTimerRef.current) {
+          window.clearTimeout(wheelLockTimerRef.current);
+          wheelLockTimerRef.current = 0;
+        }
+      };
 
       const onWheel = (event: WheelEvent) => {
         if (panelHeightRef.current <= 0) return;
@@ -160,36 +167,36 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
         }
 
         event.preventDefault();
-        if (event.deltaY === 0) return;
+        event.stopPropagation();
+        if (event.deltaY === 0 || wheelLockedRef.current) return;
 
-        if (!wheelGestureActiveRef.current) {
-          wheelGestureActiveRef.current = true;
-          const direction = event.deltaY > 0 ? 1 : -1;
-          const next = clampWeek(
-            selectedWeekRef.current + direction,
-            numberOfWeeks,
-          );
-          if (next !== selectedWeekRef.current) {
-            onWeekChangeRef.current(next);
-            scrollToWeek(next, "smooth");
-          }
-        }
+        const direction = event.deltaY > 0 ? 1 : -1;
+        const next = clampWeek(
+          selectedWeekRef.current + direction,
+          numberOfWeeks,
+        );
+        if (next === selectedWeekRef.current) return;
 
-        if (wheelGestureTimerRef.current) {
-          window.clearTimeout(wheelGestureTimerRef.current);
-        }
-        wheelGestureTimerRef.current = window.setTimeout(() => {
-          wheelGestureActiveRef.current = false;
-          wheelGestureTimerRef.current = 0;
-        }, WHEEL_GESTURE_MS);
+        wheelLockedRef.current = true;
+        selectedWeekRef.current = next;
+        onWeekChangeRef.current(next);
+        scrollToWeek(next, "smooth");
+
+        // Keep the lock for the full animation window so a single trackpad
+        // gesture cannot step multiple weeks as scrollend fires early.
+        wheelLockTimerRef.current = window.setTimeout(
+          releaseWheelLock,
+          WHEEL_LOCK_MS,
+        );
       };
 
-      scroller.addEventListener("wheel", onWheel, { passive: false });
+      scroller.addEventListener("wheel", onWheel, {
+        passive: false,
+        capture: true,
+      });
       return () => {
-        scroller.removeEventListener("wheel", onWheel);
-        if (wheelGestureTimerRef.current) {
-          window.clearTimeout(wheelGestureTimerRef.current);
-        }
+        scroller.removeEventListener("wheel", onWheel, { capture: true });
+        releaseWheelLock();
       };
     }, [numberOfWeeks]);
 
@@ -224,7 +231,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     return (
       <div
         ref={scrollerRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain snap-y snap-mandatory [overflow-anchor:none]"
         onScroll={handleScroll}
       >
         {panelHeight > 0 &&
@@ -234,11 +241,11 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
               <div
                 key={week}
                 data-week={week}
-                className="box-border w-full min-h-0 shrink-0 snap-start snap-always overflow-hidden"
+                className="box-border w-full min-h-0 shrink-0 snap-start snap-always overflow-hidden [overflow-anchor:none]"
                 style={{ height: panelHeight }}
               >
                 {isMounted ? (
-                  <PlanArea weekNumber={week} />
+                  <PlanArea weekNumber={week} active={week === selectedWeek} />
                 ) : (
                   <div className="size-full" aria-hidden />
                 )}

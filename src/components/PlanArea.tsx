@@ -18,6 +18,8 @@ const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 type PlanAreaProps = {
   weekNumber: number;
+  /** When false, today's editor will not steal focus (used for offscreen weeks). */
+  active?: boolean;
 };
 
 type ContextMenuState = {
@@ -72,7 +74,7 @@ function getMonthForWeek(weekNumber: number, dates: Date[], now: Date): number {
     : dates[0]!.getMonth() + 1;
 }
 
-const PlanArea = ({ weekNumber }: PlanAreaProps) => {
+const PlanArea = ({ weekNumber, active = true }: PlanAreaProps) => {
   const now = new Date();
   const todayDOY = getDayOfYear(now);
   const dates = getDatesFromWeekNumber(weekNumber);
@@ -188,7 +190,7 @@ const PlanArea = ({ weekNumber }: PlanAreaProps) => {
           id={key}
           value={notes[key] ?? ""}
           today={today}
-          autoFocus={today}
+          autoFocus={active && today}
           onChange={(value) => handleInput(key, value)}
           onMoveLine={(lineIndex) =>
             moveItems(dayIndex, (source, destination) =>

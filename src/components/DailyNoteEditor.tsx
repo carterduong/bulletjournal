@@ -325,7 +325,7 @@ const DailyNoteEditor = ({
 
   useEffect(() => {
     if (autoFocus && editor && !editor.isDestroyed) {
-      editor.commands.focus("start");
+      editor.commands.focus("start", { scrollIntoView: false });
     }
   }, [autoFocus, editor]);
 
