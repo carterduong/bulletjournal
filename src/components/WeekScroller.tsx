@@ -132,7 +132,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     return (
       <div
         ref={scrollerRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
         onScroll={handleScroll}
       >
         {weeks.map((week) => {
@@ -141,7 +141,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
             <div
               key={week}
               data-week={week}
-              className="box-border h-full snap-start snap-always"
+              className="box-border w-full shrink-0 grow-0 basis-full snap-start snap-always"
             >
               {isMounted ? (
                 <PlanArea weekNumber={week} />
