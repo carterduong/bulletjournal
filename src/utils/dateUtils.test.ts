@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+  formatDate,
   getCurrentWeekNumber,
   getNumberOfWeeks,
   isLeapYear,
   getDayOfYear,
   getDatesFromWeekNumber,
+  getMonthForDay,
+  getMonthForWeek,
 } from "./dateUtils";
 
 function date(year: number, monthIndex: number, day: number): Date {
@@ -216,5 +219,57 @@ describe("getDatesFromWeekNumber", () => {
     for (const day of dates) {
       expect(getCurrentWeekNumber(day)).toBe(1);
     }
+  });
+});
+
+describe("formatDate", () => {
+  it("formats as M.D without year by default", () => {
+    expect(formatDate(date(2026, 6, 15))).toBe("7.15");
+    expect(formatDate(date(2026, 0, 1))).toBe("1.1");
+    expect(formatDate(date(2026, 11, 31))).toBe("12.31");
+  });
+
+  it("includes the year when requested", () => {
+    expect(formatDate(date(2026, 6, 15), true)).toBe("7.15.2026");
+    expect(formatDate(date(2025, 11, 29), true)).toBe("12.29.2025");
+  });
+});
+
+describe("getMonthForDay", () => {
+  it("returns a 1-indexed calendar month", () => {
+    expect(getMonthForDay(date(2026, 0, 1))).toBe(1);
+    expect(getMonthForDay(date(2026, 6, 15))).toBe(7);
+    expect(getMonthForDay(date(2026, 11, 31))).toBe(12);
+  });
+});
+
+describe("getMonthForWeek", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(date(2026, 6, 15));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns today's month when today is in the week", () => {
+    const now = date(2026, 6, 15);
+    const dates = getDatesFromWeekNumber(getCurrentWeekNumber(now));
+    expect(getMonthForWeek(dates, now)).toBe(7);
+  });
+
+  it("returns the Monday's month when today is not in the week", () => {
+    const now = date(2026, 6, 15);
+    const dates = getDatesFromWeekNumber(1);
+    expect(getMonthForWeek(dates, now)).toBe(12);
+  });
+
+  it("uses today's month even when Monday falls in the previous month", () => {
+    // Week of Jun 29 – Jul 5 2026; "today" is Jul 2 → month 7, not June
+    const now = date(2026, 6, 2);
+    const dates = getDatesFromWeekNumber(getCurrentWeekNumber(now));
+    expect(getMonthForDay(dates[0]!)).toBe(6);
+    expect(getMonthForWeek(dates, now)).toBe(7);
   });
 });

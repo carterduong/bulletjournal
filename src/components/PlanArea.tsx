@@ -6,9 +6,12 @@ import {
   type ReactNode,
 } from "react";
 import {
-  getCurrentWeekNumber,
+  DAY_NAMES,
+  MONTH_NAMES,
+  formatDate,
   getDayOfYear,
   getDatesFromWeekNumber,
+  getMonthForWeek,
 } from "../utils/dateUtils";
 import { createMoveHistory, type MoveHistoryEntry } from "../utils/moveHistory";
 import {
@@ -19,22 +22,6 @@ import {
   type MoveResult,
 } from "../utils/noteUtils";
 import { DailyNoteEditor } from "./DailyNoteEditor";
-
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 type PlanAreaProps = {
   weekNumber: number;
@@ -47,13 +34,6 @@ type ContextMenuState = {
 };
 
 type NotesMap = Record<string, string>;
-
-function formatDate(day: Date, includeYear = false): string {
-  if (includeYear) {
-    return `${day.getMonth() + 1}.${day.getDate()}.${day.getFullYear()}`;
-  }
-  return `${day.getMonth() + 1}.${day.getDate()}`;
-}
 
 function buildNoteKeys(
   dates: Date[],
@@ -85,18 +65,11 @@ function applyNoteValues(entries: NotesMap) {
   }
 }
 
-function getMonthForWeek(weekNumber: number, dates: Date[], now: Date): number {
-  const todayWeek = getCurrentWeekNumber(now);
-  return weekNumber === todayWeek
-    ? now.getMonth() + 1
-    : dates[0]!.getMonth() + 1;
-}
-
 const PlanArea = ({ weekNumber }: PlanAreaProps) => {
   const now = new Date();
   const todayDOY = getDayOfYear(now);
   const dates = getDatesFromWeekNumber(weekNumber);
-  const currentMonth = getMonthForWeek(weekNumber, dates, now);
+  const currentMonth = getMonthForWeek(dates, now);
   const noteKeys = buildNoteKeys(dates, weekNumber, currentMonth);
 
   const [notes, setNotes] = useState<NotesMap>(() => loadNotes(noteKeys));
@@ -105,7 +78,7 @@ const PlanArea = ({ weekNumber }: PlanAreaProps) => {
 
   useEffect(() => {
     const nextDates = getDatesFromWeekNumber(weekNumber);
-    const nextMonth = getMonthForWeek(weekNumber, nextDates, new Date());
+    const nextMonth = getMonthForWeek(nextDates, new Date());
     moveHistoryRef.current.clear();
     setNotes(loadNotes(buildNoteKeys(nextDates, weekNumber, nextMonth)));
   }, [weekNumber]);
@@ -304,7 +277,9 @@ const PlanArea = ({ weekNumber }: PlanAreaProps) => {
       >
         <div className={headingClasses(false) + " flex justify-between"}>
           <span>Next month</span>
-          <span className="text-[darkgrey]">{MONTH_NAMES[currentMonth]}</span>
+          <span className="text-[darkgrey]">
+            {MONTH_NAMES[currentMonth % 12]}
+          </span>
         </div>
         <textarea
           id={nextMonthKey}
