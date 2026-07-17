@@ -156,7 +156,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
               <div
                 key={week}
                 data-week={week}
-                className="box-border w-full min-h-0 shrink-0 snap-start snap-always overflow-hidden [overflow-anchor:none]"
+                className="box-border w-full min-h-0 shrink-0 snap-start overflow-hidden [overflow-anchor:none]"
                 style={{ height: panelHeight }}
               >
                 {isMounted ? (
