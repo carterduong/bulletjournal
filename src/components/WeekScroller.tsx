@@ -10,11 +10,8 @@ import {
 import { getNumberOfWeeks } from "../utils/dateUtils";
 import { PlanArea } from "./PlanArea";
 
-/** How many weeks on each side of the active week keep a live PlanArea mounted. */
+/** How many weeks on each side of the scroll-centered week stay mounted. */
 const MOUNT_RADIUS = 1;
-
-/** Minimum time a wheel gesture stays locked after stepping a week. */
-const WHEEL_LOCK_MS = 500;
 
 type WeekScrollerProps = {
   selectedWeek: number;
@@ -35,40 +32,10 @@ function weekFromScrollTop(
   numberOfWeeks: number,
 ): number {
   if (panelHeight <= 0) return 1;
+  // Nearest week: before halfway, stay on the current week; past halfway,
+  // advance. Matches mandatory scroll-snap settling.
   const index = Math.round(scrollTop / panelHeight);
   return clampWeek(index + 1, numberOfWeeks);
-}
-
-function canScrollInDirection(element: HTMLElement, deltaY: number): boolean {
-  if (deltaY === 0) return false;
-  const style = window.getComputedStyle(element);
-  const overflowY = style.overflowY;
-  if (overflowY !== "auto" && overflowY !== "scroll") return false;
-
-  // Ignore sub-pixel / padding phantom overflow from min-height:100% editors.
-  const maxScroll = element.scrollHeight - element.clientHeight;
-  if (maxScroll < 8) return false;
-
-  if (deltaY > 0) {
-    return element.scrollTop < maxScroll - 1;
-  }
-  return element.scrollTop > 1;
-}
-
-function nestedScrollableAllowsWheel(
-  target: EventTarget | null,
-  scroller: HTMLElement,
-  deltaY: number,
-): boolean {
-  if (!(target instanceof Element)) return false;
-  let node: Element | null = target;
-  while (node && node !== scroller) {
-    if (node instanceof HTMLElement && canScrollInDirection(node, deltaY)) {
-      return true;
-    }
-    node = node.parentElement;
-  }
-  return false;
 }
 
 const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
@@ -77,17 +44,16 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     const scrollerRef = useRef<HTMLDivElement>(null);
     const selectedWeekRef = useRef(selectedWeek);
     const panelHeightRef = useRef(0);
-    const onWeekChangeRef = useRef(onWeekChange);
     const ignoreScrollSyncRef = useRef(false);
-    const wheelLockedRef = useRef(false);
-    const wheelLockTimerRef = useRef(0);
     const frameRef = useRef(0);
     const scrollUnlockTimerRef = useRef(0);
     const [panelHeight, setPanelHeight] = useState(0);
+    // Mount window follows the scroll-centered week so panels stay ready
+    // without waiting on parent state.
+    const [mountWeek, setMountWeek] = useState(selectedWeek);
 
     selectedWeekRef.current = selectedWeek;
     panelHeightRef.current = panelHeight;
-    onWeekChangeRef.current = onWeekChange;
 
     function scrollToWeek(
       week: number,
@@ -97,8 +63,10 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       const height = panelHeightRef.current || scroller?.clientHeight || 0;
       if (!scroller || height <= 0) return;
 
-      const top = (clampWeek(week, numberOfWeeks) - 1) * height;
+      const next = clampWeek(week, numberOfWeeks);
+      const top = (next - 1) * height;
       ignoreScrollSyncRef.current = true;
+      setMountWeek(next);
       scroller.scrollTo({ top, behavior });
 
       if (scrollUnlockTimerRef.current) {
@@ -147,60 +115,6 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
     }, [panelHeight]);
 
     useEffect(() => {
-      const scroller = scrollerRef.current;
-      if (!scroller) return;
-
-      const releaseWheelLock = () => {
-        wheelLockedRef.current = false;
-        if (wheelLockTimerRef.current) {
-          window.clearTimeout(wheelLockTimerRef.current);
-          wheelLockTimerRef.current = 0;
-        }
-      };
-
-      const onWheel = (event: WheelEvent) => {
-        if (panelHeightRef.current <= 0) return;
-        if (
-          nestedScrollableAllowsWheel(event.target, scroller, event.deltaY)
-        ) {
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-        if (event.deltaY === 0 || wheelLockedRef.current) return;
-
-        const direction = event.deltaY > 0 ? 1 : -1;
-        const next = clampWeek(
-          selectedWeekRef.current + direction,
-          numberOfWeeks,
-        );
-        if (next === selectedWeekRef.current) return;
-
-        wheelLockedRef.current = true;
-        selectedWeekRef.current = next;
-        onWeekChangeRef.current(next);
-        scrollToWeek(next, "smooth");
-
-        // Keep the lock for the full animation window so a single trackpad
-        // gesture cannot step multiple weeks as scrollend fires early.
-        wheelLockTimerRef.current = window.setTimeout(
-          releaseWheelLock,
-          WHEEL_LOCK_MS,
-        );
-      };
-
-      scroller.addEventListener("wheel", onWheel, {
-        passive: false,
-        capture: true,
-      });
-      return () => {
-        scroller.removeEventListener("wheel", onWheel, { capture: true });
-        releaseWheelLock();
-      };
-    }, [numberOfWeeks]);
-
-    useEffect(() => {
       return () => {
         if (frameRef.current) cancelAnimationFrame(frameRef.current);
         if (scrollUnlockTimerRef.current) {
@@ -220,6 +134,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
           height,
           numberOfWeeks,
         );
+        setMountWeek((prev) => (prev === week ? prev : week));
         if (week !== selectedWeekRef.current) {
           onWeekChange(week);
         }
@@ -236,7 +151,7 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
       >
         {panelHeight > 0 &&
           weeks.map((week) => {
-            const isMounted = Math.abs(week - selectedWeek) <= MOUNT_RADIUS;
+            const isMounted = Math.abs(week - mountWeek) <= MOUNT_RADIUS;
             return (
               <div
                 key={week}
@@ -245,7 +160,10 @@ const WeekScroller = forwardRef<WeekScrollerHandle, WeekScrollerProps>(
                 style={{ height: panelHeight }}
               >
                 {isMounted ? (
-                  <PlanArea weekNumber={week} active={week === selectedWeek} />
+                  <PlanArea
+                    weekNumber={week}
+                    active={week === selectedWeek}
+                  />
                 ) : (
                   <div className="size-full" aria-hidden />
                 )}
