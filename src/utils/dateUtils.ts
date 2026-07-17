@@ -1,3 +1,26 @@
+export const DAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+] as const;
+
+export const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
 export function getCurrentWeekNumber(date: Date): number {
   const d = new Date(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
@@ -46,4 +69,28 @@ export function getDatesFromWeekNumber(weekNumber: number): Date[] {
     day.setDate(dayNumber + index);
     return day;
   });
+}
+
+export function formatDate(day: Date, includeYear = false): string {
+  if (includeYear) {
+    return `${getMonthForDay(day)}.${day.getDate()}.${day.getFullYear()}`;
+  }
+  return `${getMonthForDay(day)}.${day.getDate()}`;
+}
+
+export function getMonthForDay(day: Date): number {
+  return day.getMonth() + 1;
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+export function getMonthForWeek(dates: Date[], now: Date): number {
+  const todayInWeek = dates.some((day) => isSameCalendarDay(day, now));
+  return todayInWeek ? getMonthForDay(now) : getMonthForDay(dates[0]!);
 }
