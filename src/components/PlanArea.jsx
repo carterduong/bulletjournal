@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   getCurrentWeekNumber,
   getDayOfYear,
   getDatesFromWeekNumber,
 } from "../utils/dateUtils";
+import { createMoveHistory } from "../utils/moveHistory";
 import {
   getNextDailyKey,
   moveIncompleteLines,
@@ -41,6 +42,12 @@ function loadNotes(keys) {
   return notes;
 }
 
+function applyNoteValues(entries) {
+  for (const [key, value] of Object.entries(entries)) {
+    localStorage.setItem(key, value);
+  }
+}
+
 function getMonthForWeek(weekNumber, dates, now) {
   const todayWeek = getCurrentWeekNumber(now);
   return weekNumber === todayWeek
@@ -57,20 +64,28 @@ export default function PlanArea({ weekNumber }) {
 
   const [notes, setNotes] = useState(() => loadNotes(noteKeys));
   const [contextMenu, setContextMenu] = useState(null);
+  const moveHistoryRef = useRef(createMoveHistory());
 
   useEffect(() => {
     const nextDates = getDatesFromWeekNumber(weekNumber);
     const nextMonth = getMonthForWeek(weekNumber, nextDates, new Date());
+    moveHistoryRef.current.clear();
     setNotes(loadNotes(buildNoteKeys(nextDates, weekNumber, nextMonth)));
   }, [weekNumber]);
 
   function handleInput(key, value) {
+    moveHistoryRef.current.recordEdit();
     localStorage.setItem(key, value);
     setNotes((prev) => ({ ...prev, [key]: value }));
   }
 
   function getDestinationKey(dayIndex) {
     return getNextDailyKey(dayIndex, noteKeys, dates[0]);
+  }
+
+  function writeNotes(entries) {
+    applyNoteValues(entries);
+    setNotes((prev) => ({ ...prev, ...entries }));
   }
 
   function moveItems(dayIndex, transform) {
@@ -83,13 +98,41 @@ export default function PlanArea({ weekNumber }) {
 
     if (!result.moved) return;
 
-    localStorage.setItem(sourceKey, result.source);
-    localStorage.setItem(destinationKey, result.destination);
-    setNotes((prev) => ({
-      ...prev,
+    moveHistoryRef.current.recordMove({
+      sourceKey,
+      destinationKey,
+      beforeSource: source,
+      beforeDestination: destination,
+      afterSource: result.source,
+      afterDestination: result.destination,
+    });
+
+    writeNotes({
       [sourceKey]: result.source,
       [destinationKey]: result.destination,
-    }));
+    });
+  }
+
+  function undoMove(canEditorUndo) {
+    const entry = moveHistoryRef.current.undo(canEditorUndo);
+    if (!entry) return false;
+
+    writeNotes({
+      [entry.sourceKey]: entry.beforeSource,
+      [entry.destinationKey]: entry.beforeDestination,
+    });
+    return true;
+  }
+
+  function redoMove(canEditorRedo) {
+    const entry = moveHistoryRef.current.redo(canEditorRedo);
+    if (!entry) return false;
+
+    writeNotes({
+      [entry.sourceKey]: entry.afterSource,
+      [entry.destinationKey]: entry.afterDestination,
+    });
+    return true;
   }
 
   function handleContextMenu(event, dayIndex) {
@@ -119,16 +162,16 @@ export default function PlanArea({ weekNumber }) {
           today={today}
           autoFocus={today}
           onChange={(value) => handleInput(key, value)}
-          onMoveLine={(lineIndex) =>
-            moveItems(dayIndex, (source, destination) =>
-              moveLine(source, destination, lineIndex),
-            )
-          }
-          onMoveLines={(lineIndices) =>
-            moveItems(dayIndex, (source, destination) =>
-              moveLines(source, destination, lineIndices),
-            )
-          }
+          onMoveLine={(lineIndex) => moveItems(
+            dayIndex,
+            (source, destination) => moveLine(source, destination, lineIndex),
+          )}
+          onMoveLines={(lineIndices) => moveItems(
+            dayIndex,
+            (source, destination) => moveLines(source, destination, lineIndices),
+          )}
+          onUndoMove={undoMove}
+          onRedoMove={redoMove}
         />
       </section>
     );

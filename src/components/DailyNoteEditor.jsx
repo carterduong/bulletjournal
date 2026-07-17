@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   EditorContent,
   useEditor,
@@ -9,6 +9,55 @@ import Text from '@tiptap/extension-text';
 import { UndoRedo } from '@tiptap/extensions';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { documentToNote, noteToDocument } from '../utils/noteUtils';
+
+function setEditorContent(editor, value) {
+  editor
+    .chain()
+    .command(({ tr }) => {
+      tr.setMeta('addToHistory', false);
+      return true;
+    })
+    .setContent(noteToDocument(value), { emitUpdate: false })
+    .run();
+}
+
+const MoveAwareUndoRedo = UndoRedo.extend({
+  addOptions() {
+    return {
+      ...this.parent?.(),
+      onUndoMove: () => false,
+      onRedoMove: () => false,
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      // Prefer the shared move stack when the latest action was a move, so
+      // Cmd+Z rewinds cross-day hops instead of applying stale per-editor history.
+      'Mod-z': () => {
+        if (this.options.onUndoMove(this.editor.can().undo())) return true;
+        return this.editor.commands.undo();
+      },
+      'Shift-Mod-z': () => {
+        if (this.options.onRedoMove(this.editor.can().redo())) return true;
+        return this.editor.commands.redo();
+      },
+      'Mod-y': () => {
+        if (this.options.onRedoMove(this.editor.can().redo())) return true;
+        return this.editor.commands.redo();
+      },
+      // Russian keyboard layouts
+      'Mod-я': () => {
+        if (this.options.onUndoMove(this.editor.can().undo())) return true;
+        return this.editor.commands.undo();
+      },
+      'Shift-Mod-я': () => {
+        if (this.options.onRedoMove(this.editor.can().redo())) return true;
+        return this.editor.commands.redo();
+      },
+    };
+  },
+});
 
 const selectionStateKey = new PluginKey('selectionState');
 
@@ -162,15 +211,21 @@ export default function DailyNoteEditor({
   onChange,
   onMoveLine,
   onMoveLines,
+  onUndoMove,
+  onRedoMove,
   autoFocus = false,
   today = false,
 }) {
   const onChangeRef = useRef(onChange);
   const onMoveLineRef = useRef(onMoveLine);
   const onMoveLinesRef = useRef(onMoveLines);
+  const onUndoMoveRef = useRef(onUndoMove);
+  const onRedoMoveRef = useRef(onRedoMove);
   onChangeRef.current = onChange;
   onMoveLineRef.current = onMoveLine;
   onMoveLinesRef.current = onMoveLines;
+  onUndoMoveRef.current = onUndoMove;
+  onRedoMoveRef.current = onRedoMove;
 
   const selectionListenersRef = useRef(new Set());
 
@@ -186,7 +241,10 @@ export default function DailyNoteEditor({
   const extensions = useMemo(() => [
     Document,
     Text,
-    UndoRedo,
+    MoveAwareUndoRedo.configure({
+      onUndoMove: (canEditorUndo) => onUndoMoveRef.current?.(canEditorUndo) ?? false,
+      onRedoMove: (canEditorRedo) => onRedoMoveRef.current?.(canEditorRedo) ?? false,
+    }),
     MoveableParagraph.configure({
       onMoveLine: (lineIndex) => onMoveLineRef.current(lineIndex),
       onMoveLines: (lineIndices) => onMoveLinesRef.current(lineIndices),
@@ -214,7 +272,9 @@ export default function DailyNoteEditor({
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     if (documentToNote(editor.getJSON()) === value) return;
-    editor.commands.setContent(noteToDocument(value), { emitUpdate: false });
+    // External updates (e.g. moves) must not create per-editor history entries,
+    // otherwise Cmd+Z only restores the source day and leaves the destination copy.
+    setEditorContent(editor, value);
   }, [editor, value]);
 
   useEffect(() => {
