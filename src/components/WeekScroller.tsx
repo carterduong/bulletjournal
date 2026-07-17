@@ -40,13 +40,14 @@ function canScrollInDirection(element: HTMLElement, deltaY: number): boolean {
   if (deltaY === 0) return false;
   const style = window.getComputedStyle(element);
   const overflowY = style.overflowY;
-  const scrollable =
-    (overflowY === "auto" || overflowY === "scroll") &&
-    element.scrollHeight > element.clientHeight + 1;
-  if (!scrollable) return false;
+  if (overflowY !== "auto" && overflowY !== "scroll") return false;
+
+  // Ignore sub-pixel / padding phantom overflow from min-height:100% editors.
+  const maxScroll = element.scrollHeight - element.clientHeight;
+  if (maxScroll < 8) return false;
 
   if (deltaY > 0) {
-    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+    return element.scrollTop < maxScroll - 1;
   }
   return element.scrollTop > 1;
 }
