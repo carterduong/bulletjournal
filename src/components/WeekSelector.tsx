@@ -35,6 +35,7 @@ const WeekSelector = ({ selectedWeek, onWeekClick }: WeekSelectorProps) => {
               onClick={handleWeekClick}
             >
               {String(i).padStart(2, "0")}
+              {i === currentWeek && <span>*</span>}
             </li>
           ))}
         </ol>
