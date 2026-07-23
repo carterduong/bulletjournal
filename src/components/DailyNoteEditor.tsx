@@ -304,6 +304,7 @@ const DailyNoteEditor = ({
           class:
             "min-h-full cursor-text whitespace-pre-wrap break-words focus:outline-none",
           "aria-label": "Daily notes",
+          spellcheck: "false",
         },
         // Each line is its own paragraph; ProseMirror's default text serializer
         // joins blocks with "\n\n", which injects blank lines when pasting into
